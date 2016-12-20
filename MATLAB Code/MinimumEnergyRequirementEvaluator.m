@@ -1,7 +1,7 @@
 %%%%STREAM INFO%%%%
 %%%%Property Definition: s(i,:) = [TempIn(K), TempOut(K), HeatLoad(kW),
 %%%%CP(kW/K)], where i<=numOfStreams. 
-%%%%If property unspecified assign as -1. 
+%%%%If property unspecified assign as 0. 
 %%%%Must have at least three specified properties. 
 
     s = FindStreamUnspecifiedProps([ 450, 40, -1006, 0;
