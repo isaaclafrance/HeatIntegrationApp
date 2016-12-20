@@ -1,4 +1,4 @@
-package com.heatIntegration.internals;
+package com.isaacapps.heatintegrationapp.internals;
 
 public class HXNetwork {
 

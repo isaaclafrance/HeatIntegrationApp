@@ -1,5 +1,5 @@
 package com.isaacapps.heatintegrationapp.graphics;
 
-public class EnergyCascadeDiagram {
+public class LineGraph {
 
 }

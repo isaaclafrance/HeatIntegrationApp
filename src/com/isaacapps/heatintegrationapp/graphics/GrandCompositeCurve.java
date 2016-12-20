@@ -1,6 +1,6 @@
-package com.heatIntegration.graphics;
+package com.isaacapps.heatintegrationapp.graphics;
 
-import com.heatIntegration.internals.ProblemTable;;
+import com.isaacapps.heatintegrationapp.internals.ProblemTable;;
 
 public class GrandCompositeCurve extends LineGraph {
 	private ProblemTable problemTable;
@@ -8,22 +8,28 @@ public class GrandCompositeCurve extends LineGraph {
 	
 	public GrandCompositeCurve(ProblemTable problemTable){
 		this.problemTable = problemTable;
-		createDataPoints();
+		setupDataPoints();
 	}
 	
-	private void createDataPoints(){
-		int numOfDataPoints = problemTable.cascadeIntervals.size()+1;
-		dataPoints = new float[numOfDataPoints][3];
+	private void setupDataPoints(){
+		int numOfDataPoints = problemTable.getCascadeIntervals().size();
+		dataPoints = new float[numOfDataPoints][2];
 		
-		for(int i=0;i<numOfDataPoints-1; i++){
-			dataPoints[i][0] = problemTable.cascadeIntervals.get(i).temp1;
-			dataPoints[i][1] = problemTable.cascadeIntervals.get(i).heatLoad;
+		dataPoints[0][0] = problemTable.getCascadeIntervals().get(0).getTemp2();
+		dataPoints[0][1] = problemTable.getQH();
+		
+		for(int i=1;i<numOfDataPoints; i++){
+			dataPoints[i][0] = problemTable.getCascadeIntervals().get(i).getTemp2();
+			dataPoints[i][1] = problemTable.getCascadeIntervals().get(i).getCascadeEnergy();
 		}
-		dataPoints[numOfDataPoints-1][0] = problemTable.cascadeIntervals.get(numOfDataPoints-1).temp2;
-		dataPoints[numOfDataPoints-1][1] = problemTable.cascadeIntervals.get(numOfDataPoints-1).cascadeEnergy;
 	}
 	
-	public void updateDataPoints(){
-		createDataPoints();
+	public void updateGraph(){
+		setupDataPoints();
+	}
+	
+	//
+	public float[][] getDataPoints(){
+		return dataPoints;
 	}
 }

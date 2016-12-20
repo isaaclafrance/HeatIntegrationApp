@@ -1,21 +1,19 @@
-package com.heatIntegration.graphics;
+package com.isaacapps.heatintegrationapp.graphics;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 
-import com.heatIntegration.internals.ProblemTable;
-import com.heatIntegration.internals.Stream;
-import com.heatIntegration.internals.StreamProcess;
+import com.isaacapps.heatintegrationapp.internals.Stream;
+import com.isaacapps.heatintegrationapp.internals.StreamProcess;
 
 public class CompositeCurve extends LineGraph {
 	private StreamProcess streamProcess;
-	private ProblemTable problemTable;
 	private float[][] coldStreamCurveDataPoints;
 	private float[][] hotStreamCurveDataPoints;
 	
-	public CompositeCurve(StreamProcess streamProcess, ProblemTable problemTable){
-		this.problemTable = problemTable;
+	public CompositeCurve(StreamProcess streamProcess){
 		this.streamProcess = streamProcess;
+		setupDataPoints();
 	}
 	
 	private void setupDataPoints(){
@@ -26,63 +24,67 @@ public class CompositeCurve extends LineGraph {
 	
  	private float[][] createStreamCurveDataPoints(String streamType){ //Creates data points of enthalpy vs. temperature
 		float[] tempIntervalVec = createStreamTempIntervals(streamType);
-		float[][] streamCurveDataPoint = new float[tempIntervalVec.length][2];
+		float[][] streamCurveDataPoint = new float[][]{new float[tempIntervalVec.length], createStreamTempIntervals(streamType)};
+		float totalCP;
 		
-		//Set first data point
-		streamCurveDataPoint[0][0] = tempIntervalVec[0];
-		streamCurveDataPoint[0][1] = 0.0f; 
+		//Set enthalpy reference point
+		streamCurveDataPoint[0][0] = 0.0f; 
 		
-		//Set remaining data point
-		for(int i=0; i<tempIntervalVec.length-1; i++){
-			//Assign temperatures
-			streamCurveDataPoint[i][0] = tempIntervalVec[i];
-			streamCurveDataPoint[i+1][0] = tempIntervalVec[i+1];			
-			
-			//Calculate net specific heat for each temperature interval			
-			for(Stream stream:streamProcess.streams){
-				if ( ((stream.inletTemp <= tempIntervalVec[i])&&(stream.outletTemp >= tempIntervalVec[i+1])) 
-				    || ((stream.inletTemp >= tempIntervalVec[i])&&(stream.outletTemp <= tempIntervalVec[i+1])) ){
+		for(int i=0; i<tempIntervalVec.length-1; i++){	
+			//Add up all the specific heats for streams that cross interval
+			totalCP = 0.0f;
+			for(Stream stream:streamProcess.streams.values()){ 
+				if (stream.getType().equals(streamType) 
+				    &&((stream.getInletTemp() <= tempIntervalVec[i])&&(stream.getOutletTemp() >= tempIntervalVec[i+1]) 
+				       ||(stream.getInletTemp() >= tempIntervalVec[i])&&(stream.getOutletTemp() <= tempIntervalVec[i+1])) ){
 					
-					streamCurveDataPoint[i][1] += 1/stream.cp; 
+					totalCP += stream.getCP(); 
 				}
 			}
-			
 			//Calculate net enthalpy for each temperature interval	
-			streamCurveDataPoint[i+1][1] = (streamCurveDataPoint[i+1][1] - streamCurveDataPoint[i][1])*(streamCurveDataPoint[i][0]);		
+			streamCurveDataPoint[0][i+1] = totalCP * (streamCurveDataPoint[1][i+1] - streamCurveDataPoint[1][i]) + streamCurveDataPoint[0][i];		
 		}
 		
 		return streamCurveDataPoint;
 	}	
 	private float[] createStreamTempIntervals(String streamType){
-		ArrayList<Float> tempVec = new ArrayList<Float>();	
+		ArrayList<Float> tempVec = new ArrayList<Float>();
 		float[] tempVec_array;
 		
-		for(Stream stream:streamProcess.streams){
-			//Hot Stream Curve Data Points			
+		for(Stream stream:streamProcess.streams.values()){		
 			if(stream.getType().equals(streamType)){
-				if(!tempVec.contains(stream.inletTemp)){
-					tempVec.add(stream.inletTemp);
+				if(!tempVec.contains(stream.getInletTemp())){
+					tempVec.add(stream.getInletTemp());
 				}
-				if(!tempVec.contains(stream.outletTemp)){
-					tempVec.add(stream.outletTemp);
+				if(!tempVec.contains(stream.getOutletTemp())){
+					tempVec.add(stream.getOutletTemp());
 				}
 			}
-			tempVec_array = new float[tempVec.size()];
-			for(int i=0; i<tempVec_array.length; i++){
-				tempVec_array[i] = tempVec.get(i);
-			}
-			Arrays.sort(tempVec_array);			
+		}	
+		
+		Collections.sort(tempVec);	
+		tempVec_array = new float[tempVec.size()];
+		for(int i=0;i<tempVec.size();i++){
+			tempVec_array[i] = tempVec.get(i);
 		}	
 		
 		return tempVec_array;
 	}
 	private void separateStreamCurvesByPinch(){
 		for(int i=0; i<coldStreamCurveDataPoints.length; i++){
-			coldStreamCurveDataPoints[i][0] += coldStreamCurveDataPoints[i][0] + problemTable.qC;
+			coldStreamCurveDataPoints[i][0] += coldStreamCurveDataPoints[i][0] + (streamProcess.getProblemTable().getQH() - streamProcess.getInitialHotUtility()) ;
 		}
 	}
 	
-	public void updateDataPoints(){
+	public void updateGraph(){
 		setupDataPoints();
+	}
+
+	//
+	public float[][] getColdStreamCurveDataPoints() {
+		return coldStreamCurveDataPoints;
+	}
+	public float[][] getHotStreamCurveDataPoints() {
+		return hotStreamCurveDataPoints;
 	}
 }
