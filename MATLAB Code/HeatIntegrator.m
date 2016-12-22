@@ -1,4 +1,4 @@
-function [correctedQH, correctedQC, unshiftedPinchTemps, shiftedPinchTemps, cascadeIntervals] = HeatIntegrator(deltaTMin, qH_initial, s, c, isCascadeDisplayed)
+function [correctedQH, correctedQC, unshiftedPinchTemps, shiftedPinchTemps, cascadeIntervals] = HeatIntegrator(deltaTMin, qH_initial, s, c, isCascadeDisplayed, isGrandCompositeCurveDisplayed)
 
 %%Cascade Interval Matrix. (i,1)->temp1; (i,2)->temp2; (i,3)->CP; (i,4)->heat load; (i,5)->energy sent to next interval;
 %%(i,6)->if values is 1 then reboiler, else if value is 2 then condenser. 
@@ -24,32 +24,11 @@ numOfStreams = size(s,1);
     condenserSTemps = columnSTemps(:,2);
 
 %% Determine Interval Shift Temperatures 
-    streamSTempsVec = sort(unique(streamSTemps(:)), 'descend');
-    allColumnSTempsVec = repmat(columnSTemps(:),2,1);
-    uniqueColumnSTempsVec = unique(columnSTemps(:))';
-    
-    %Consolidate column shift temperatures
-    columnSTempsVec__Repetitions =  sum( repmat(allColumnSTempsVec,1, size(uniqueColumnSTempsVec,2)) == repmat(uniqueColumnSTempsVec,size(allColumnSTempsVec,1),1) , 1);
-    columnSTempsVec__ConsolidatedRepetitions = floor((columnSTempsVec__Repetitions - 2)./2 + 2);
-    uniqueColumnSTemps_ConsolidatedRepetions_Pair = [uniqueColumnSTempsVec;columnSTempsVec__ConsolidatedRepetitions];
-
-    truncatedIndices = zeros(size(allColumnSTempsVec,1),1);
-    prevIndex = 0;
-    allIndices = [];
-    for(i = 1:size(uniqueColumnSTemps_ConsolidatedRepetions_Pair,2))
-        allIndices = find(allColumnSTempsVec == uniqueColumnSTemps_ConsolidatedRepetions_Pair(1,i));
-        truncatedIndices(prevIndex+1:prevIndex+uniqueColumnSTemps_ConsolidatedRepetions_Pair(2,i),1) = allIndices(1:uniqueColumnSTemps_ConsolidatedRepetions_Pair(2,i),1);
-        prevIndex = prevIndex + uniqueColumnSTemps_ConsolidatedRepetions_Pair(2,i);
-    end   
-    allColumnSTempsVec = allColumnSTempsVec(truncatedIndices(logical(truncatedIndices)));
-    
-    %Consolidate stream and column shift temperatures into one stream shift temperature vector.
-    replacementLogical =  sum( repmat(streamSTempsVec, 1, size(uniqueColumnSTempsVec,2)) == repmat(uniqueColumnSTempsVec, size(streamSTempsVec, 1), 1) , 2);
-    replacementLogical = logical(replacementLogical);
-    streamSTempsVec(replacementLogical) = [];
-    streamSTempsVec = sort([streamSTempsVec; allColumnSTempsVec], 'descend');
-
-    %Prepare shift temepratures vector into a replicated vector suitable for creating cascade intervals      
+    streamSTempsVec = unique(streamSTemps(:));
+    allColumnSTempsVec = columnSTemps(:);
+    duplicationLogical =  ~logical(sum( repmat(streamSTempsVec', size(allColumnSTempsVec,1), 1) == repmat(allColumnSTempsVec, 1, size(streamSTempsVec, 1)) , 2));
+    allColumnSTempsVec = [allColumnSTempsVec; allColumnSTempsVec(duplicationLogical)];
+    streamSTempsVec = [streamSTempsVec; allColumnSTempsVec];
     intervalSTempsVec = sort(repmat(streamSTempsVec,2,1), 'descend');
     intervalSTempsVec([1,end]) = [];
 
@@ -63,9 +42,8 @@ numOfStreams = size(s,1);
     cascadeIntervals(:,[1,2]) = [intervalSTempsVec(intervalInTempIndices), intervalSTempsVec(intervalOutTempIndices)];
     %
     assignedReboilers = zeros(size(c,2),1); assignedCondensers = zeros(size(c,2),1);
-    prevIndexReboiler = 0; prevIndexCondenser = 0;
-    indicesOfStreamsWithinTempRange = [];
-    for(i=1:cascadeIntervalNum)
+    reboilerIndex = 0; condenserIndex = 0;
+    for i=1:cascadeIntervalNum
         %Calculate cumulative CP for each interval that is not a column
         if(cascadeIntervals(i,1) ~= cascadeIntervals(i,2))
             indicesOfStreamsWithinTempRange = setdiff(1:numOfStreams...
@@ -91,14 +69,14 @@ numOfStreams = size(s,1);
                 cascadeIntervals(i,4) = -c(possibleReboilerIndices(1), 1);
                 cascadeIntervals(i,6) = 1;
                 cascadeIntervals(i,7) = possibleReboilerIndices(1);
-                prevIndexReboiler = prevIndexReboiler+1; 
-                assignedReboilers(prevIndexReboiler) = possibleReboilerIndices(1); 
+                reboilerIndex = reboilerIndex+1; 
+                assignedReboilers(reboilerIndex) = possibleReboilerIndices(1); 
             else
                 cascadeIntervals(i,4) = c(possibleCondenserIndices(1), 3);
                 cascadeIntervals(i,6) = 2;
                 cascadeIntervals(i,7) = possibleCondenserIndices(1);
-                prevIndexCondenser = prevIndexCondenser+1; 
-                assignedCondensers(prevIndexCondenser) = possibleCondenserIndices(1); 
+                condenserIndex = condenserIndex+1; 
+                assignedCondensers(condenserIndex) = possibleCondenserIndices(1); 
             end
         end
     end
@@ -135,7 +113,6 @@ numOfStreams = size(s,1);
         
 %% Display Feasible Energy Cascade 
     if (isCascadeDisplayed)
-        %%Display parameters
         arrowBodyLFNum = 10;
         arrowHalfLength = 1;
         boxTopBottomStr = '*********************';
@@ -200,8 +177,24 @@ numOfStreams = size(s,1);
         spMinus = ceil(length(qCLoadStr)/2);
         disp([blanks(arrowBodyLFNum-spMinus), qCLoadStr]);
     end
+ 
+ %% Display Grand Composite Curve
+     if (isGrandCompositeCurveDisplayed)
+        hLoadVTemp = zeros(size(cascadeIntervals,1)+1,2);
+        hLoadVTemp(1,[1,2]) = [cascadeIntervals(1,1), correctedQH];
+        hLoadVTemp(2:end,[1,2]) = cascadeIntervals(1:end, [2, 5]);
+
+        figure;
+        plot(hLoadVTemp(:,2), hLoadVTemp(:,1));
+
+        title(['Grand Composite Curve @ deltaT = ', num2str(deltaTMin), 'K']);      
+        ylabel('Shifted Temperature (K)');
+        xlabel('Enthalpy (kW)');
+
+        legend('Grand Composite Curve');
+     end
     
-    %toc
+%    toc
     
 end  
     

@@ -1,6 +1,5 @@
 %%%%STREAM INFO%%%%
-%%%%Property Definition: s(i,:) = [TempIn(K), TempOut(K), HeatLoad(kW),
-%%%%CP(kW/K)], where i<=numOfStreams. 
+%%%%Property Definition: s(i,:) = [TempIn(K), TempOut(K), HeatLoad(kW), CP(kW/K)]
 %%%%If property unspecified assign as 0. 
 %%%%Must have at least three specified properties. 
 
@@ -31,6 +30,6 @@
     deltaTMin = 10.0;
     qH_initial = 0;  
     
-    [correctedQH, correctedQC, unshiftedPinchTemps, shiftedPinchTemps] = HeatIntegrator(deltaTMin, qH_initial, s, c, true);
+    [correctedQH, correctedQC, unshiftedPinchTemps, shiftedPinchTemps] = HeatIntegrator(deltaTMin, qH_initial, s, c, true, true);
  
     

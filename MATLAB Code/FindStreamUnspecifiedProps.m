@@ -22,7 +22,7 @@ function [ s_complete ] = FindStreamUnspecifiedProps( s )
         
         %HeatLoad
         if s(sNum, 3) == 0
-            s(sNum,3) = abs( s(sNum,4)*(s(sNum,2) - s(sNum,1)) );
+            s(sNum,3) = s(sNum,4)*(s(sNum,2) - s(sNum,1) );
         end
     end  
 
