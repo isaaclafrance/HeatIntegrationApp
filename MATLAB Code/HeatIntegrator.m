@@ -1,4 +1,4 @@
-function [correctedQH, correctedQC, unshiftedPinchTemps, shiftedPinchTemps, cascadeIntervals] = HeatIntegrator(deltaTMin, qH_initial, s, c, isCascadeDisplayed, isGrandCompositeCurveDisplayed)
+function [minQH, minQC, unshiftedPinchTemps, shiftedPinchTemps, cascadeIntervals] = HeatIntegrator(deltaTMin, s, c, isCascadeDisplayed, isGrandCompositeCurveDisplayed)
 
 %%Cascade Interval Matrix. (i,1)->temp1; (i,2)->temp2; (i,3)->CP; (i,4)->heat load; (i,5)->energy sent to next interval;
 %%(i,6)->if values is 1 then reboiler, else if value is 2 then condenser. 
@@ -34,7 +34,7 @@ numOfStreams = size(s,1);
 
 %% Create Cascade Intervals
     cascadeIntervalNum = size(streamSTempsVec,1)-1;
-    cascadeIntervals = zeros(cascadeIntervalNum, 6); 
+    cascadeIntervals = zeros(cascadeIntervalNum, 7); 
     
     %Set input and output tempertaures
     intervalOutTempIndices = (1:cascadeIntervalNum)*2;
@@ -46,10 +46,11 @@ numOfStreams = size(s,1);
     for i=1:cascadeIntervalNum
         %Calculate cumulative CP for each interval that is not a column
         if(cascadeIntervals(i,1) ~= cascadeIntervals(i,2))
-            indicesOfStreamsWithinTempRange = setdiff(1:numOfStreams...
-                                                      ,[find(sum(streamSTemps >= cascadeIntervals(i,1), 2) == 2)...
-                                                        ;find(sum(streamSTemps <= cascadeIntervals(i,2), 2) == 2)]);
-            for(j = indicesOfStreamsWithinTempRange)
+             indicesOfStreamsWithinTempRange = setdiff(1:numOfStreams...
+                                                       ,[find(sum(streamSTemps >= cascadeIntervals(i,1), 2) == 2)...
+                                                         ;find(sum(streamSTemps <= cascadeIntervals(i,2), 2) == 2)]);
+
+            for j = indicesOfStreamsWithinTempRange
                 if(coldStreamLogical(j) == 1) %Subtract cp if cold stream
                     cascadeIntervals(i,3) = cascadeIntervals(i,3) - s(j,4); %Subtract cp if cold stream
                 else
@@ -83,12 +84,11 @@ numOfStreams = size(s,1);
 
 %% Perform Energy Cascade.      
     %Infeasible
-        cascadeIntervals(1:size(cascadeIntervals,1), 5) = cumsum(cascadeIntervals(1:size(cascadeIntervals,1), 4)) + ones(cascadeIntervalNum,1)*qH_initial;
+        cascadeIntervals(1:size(cascadeIntervals,1), 5) = cumsum(cascadeIntervals(1:size(cascadeIntervals,1), 4));
     %Feasible
         %Find heat load of interval that violates the second law of
         %thermodynamics the most. Then use that to find the corrected qH and shifted temperature pinches.
         %Then apply this correction to energy cascade.     
-        correctedQH = qH_initial;
         pinchIntervalLoad = -min(unique(cascadeIntervals(logical(cascadeIntervals(:, 5)<0),5)));
         pinchIntervalIndices = [];
         shiftedPinchTemps = [];
@@ -96,41 +96,36 @@ numOfStreams = size(s,1);
         if(~isempty(pinchIntervalLoad))
             pinchIntervalIndices = find(cascadeIntervals(:, 5)== -pinchIntervalLoad);
             shiftedPinchTemps = cascadeIntervals(pinchIntervalIndices, 2);
-            correctedQH = correctedQH + pinchIntervalLoad;
-            cascadeIntervals(1:size(cascadeIntervals,1), 5) = cascadeIntervals(1:size(cascadeIntervals,1), 5) + ones(cascadeIntervalNum,1)*correctedQH; 
+            minQH = pinchIntervalLoad;
+            cascadeIntervals(1:size(cascadeIntervals,1), 5) = cascadeIntervals(1:size(cascadeIntervals,1), 5) + ones(cascadeIntervalNum,1)*minQH; 
             
             %Find unshifted pinch temperatures based on whether the shifted
             %temperatures are associated with cold or hot streams
             streamPinchTempLogical = logical( sum(repmat(streamSTemps(:), 1, size(shiftedPinchTemps,2)) == repmat(shiftedPinchTemps', size(streamSTemps(:),1), size(streamSTemps(:),2)),2) ) ;
             columnPinchTempLogical = logical( sum(repmat(columnSTemps(:), 1, size(shiftedPinchTemps,2)) == repmat(shiftedPinchTemps', size(columnSTemps(:),1), size(columnSTemps(:),2)),2) ) ;
-            s_linear = s(:);
-            c_linear = c(:);     
+            s_linear = s(:, [1,2]);
+            c_linear = c(:,[2,4]);     
             unshiftedPinchTemps = unique( [ s_linear(streamPinchTempLogical); c_linear(columnPinchTempLogical) ]); 
         end
         
         %Corrected qC
-        correctedQC = cascadeIntervals(end, 5);
+        minQC = cascadeIntervals(end, 5);
         
 %% Display Feasible Energy Cascade 
     if (isCascadeDisplayed)
         arrowBodyLFNum = 10;
-        arrowHalfLength = 1;
         boxTopBottomStr = '*********************';
         boxSideStr = '*                   *';
 
         %%Display Qh
-        for j = 1:arrowHalfLength
-           disp([blanks(arrowBodyLFNum), '|']);
-        end
+        disp([blanks(arrowBodyLFNum), '|']);
 
         sTempStr = [num2str(cascadeIntervals(1, 1)), 'K '];
         spMinus = length(sTempStr);
-        disp([blanks(arrowBodyLFNum-spMinus), sTempStr, '| ', 'QH: ', num2str(correctedQH)]);
+        disp([blanks(arrowBodyLFNum-spMinus), sTempStr, '| ', 'QH: ', num2str(minQH)]);
 
-        for j = 1:arrowHalfLength
-           disp([blanks(arrowBodyLFNum), '|']);
-        end
-        disp([blanks(arrowBodyLFNum-1), ' \/']);
+        disp([blanks(arrowBodyLFNum), '|']);
+        disp([blanks(arrowBodyLFNum-1), '\+/']);
         
         %%Display cascade
         for i = 1:size(cascadeIntervals,1)
@@ -151,9 +146,7 @@ numOfStreams = size(s,1);
             disp(boxTopBottomStr);
             
             %%%%%
-            for j = 1:arrowHalfLength
-                disp([blanks(arrowBodyLFNum), '|']);
-            end
+            disp([blanks(arrowBodyLFNum), '|']);
             
             sTempStr = [num2str(cascadeIntervals(i, 2)), 'K '];
             spMinus = length(sTempStr);
@@ -166,14 +159,12 @@ numOfStreams = size(s,1);
                 disp([blanks(arrowBodyLFNum-spMinus), sTempStr, '| ', 'Cascade: ', num2str(cascadeIntervals(i, 5)), ' KW']);
             end
 
-            for j = 1:arrowHalfLength
-                disp([blanks(arrowBodyLFNum), '|']);
-            end
-            disp([blanks(arrowBodyLFNum-1), ' \/']);
+            disp([blanks(arrowBodyLFNum), '|']);
+            disp([blanks(arrowBodyLFNum-1), '\+/']);
         end 
 
         %%Display QC
-        qCLoadStr = ['QC: ',num2str(correctedQC), ' KW'];
+        qCLoadStr = ['QC: ',num2str(minQC), ' KW'];
         spMinus = ceil(length(qCLoadStr)/2);
         disp([blanks(arrowBodyLFNum-spMinus), qCLoadStr]);
     end
@@ -181,7 +172,7 @@ numOfStreams = size(s,1);
  %% Display Grand Composite Curve
      if (isGrandCompositeCurveDisplayed)
         hLoadVTemp = zeros(size(cascadeIntervals,1)+1,2);
-        hLoadVTemp(1,[1,2]) = [cascadeIntervals(1,1), correctedQH];
+        hLoadVTemp(1,[1,2]) = [cascadeIntervals(1,1), minQH];
         hLoadVTemp(2:end,[1,2]) = cascadeIntervals(1:end, [2, 5]);
 
         figure;
@@ -194,7 +185,7 @@ numOfStreams = size(s,1);
         legend('Grand Composite Curve');
      end
     
-%    toc
+   % toc
     
 end  
     

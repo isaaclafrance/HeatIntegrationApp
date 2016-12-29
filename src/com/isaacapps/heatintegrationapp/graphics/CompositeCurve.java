@@ -1,44 +1,51 @@
 package com.isaacapps.heatintegrationapp.graphics;
 
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 
-import com.isaacapps.heatintegrationapp.internals.Stream;
-import com.isaacapps.heatintegrationapp.internals.StreamProcess;
+import com.isaacapps.heatintegrationapp.internals.energytransferelements.Stream;
 
 public class CompositeCurve extends LineGraph {
-	private StreamProcess streamProcess;
-	private float[][] coldStreamCurveDataPoints;
-	private float[][] hotStreamCurveDataPoints;
+	private List<Stream> streams;
+	private double minHotUtility;
+	private double[][] coldStreamCurveDataPoints;
+	private double[][] hotStreamCurveDataPoints;
 	
-	public CompositeCurve(StreamProcess streamProcess){
-		this.streamProcess = streamProcess;
+	//
+	public CompositeCurve(List<Stream> streams, double minHotUtility){
+		this.streams = streams;
+		this.minHotUtility = minHotUtility;
 		setupDataPoints();
 	}
 	
+	//
 	private void setupDataPoints(){
 		coldStreamCurveDataPoints = createStreamCurveDataPoints("Cold");
 		hotStreamCurveDataPoints = createStreamCurveDataPoints("Hot");
 		separateStreamCurvesByPinch();
 	}
 	
- 	private float[][] createStreamCurveDataPoints(String streamType){ //Creates data points of enthalpy vs. temperature
-		float[] tempIntervalVec = createStreamTempIntervals(streamType);
-		float[][] streamCurveDataPoint = new float[][]{new float[tempIntervalVec.length], createStreamTempIntervals(streamType)};
-		float totalCP;
+ 	private double[][] createStreamCurveDataPoints(String streamType){ //Creates data points of enthalpy vs. temperature
+		double totalCP;	
+ 		List<Double> intervalTemps = createStreamIntervalTemps(streamType);
+		double[][] streamCurveDataPoint = new double[][]{new double[intervalTemps.size()], new double[intervalTemps.size()]};
+		
+		for(int i=0; i<intervalTemps.size(); i++){
+			streamCurveDataPoint[1][i] = intervalTemps.get(i);
+		}
 		
 		//Set enthalpy reference point
 		streamCurveDataPoint[0][0] = 0.0f; 
 		
-		for(int i=0; i<tempIntervalVec.length-1; i++){	
-			//Add up all the specific heats for streams that cross interval
+		for(int i=0; i<intervalTemps.size()-1; i++){	
+			//Add up all the specific heats for streamsMap that cross interval
 			totalCP = 0.0f;
-			for(Stream stream:streamProcess.streams.values()){ 
+			for(Stream stream:streams){ 
 				if (stream.getType().equals(streamType) 
-				    &&((stream.getInletTemp() <= tempIntervalVec[i])&&(stream.getOutletTemp() >= tempIntervalVec[i+1]) 
-				       ||(stream.getInletTemp() >= tempIntervalVec[i])&&(stream.getOutletTemp() <= tempIntervalVec[i+1])) ){
+				    &&((stream.getSourceTemp() <= intervalTemps.get(i))&&(stream.getTargetTemp() >= intervalTemps.get(i+1)) 
+				       ||(stream.getSourceTemp() >= intervalTemps.get(i))&&(stream.getTargetTemp() <= intervalTemps.get(i+1))) ){
 					
-					totalCP += stream.getCP(); 
+					totalCP += stream.getHeatTransferCoeff(); 
 				}
 			}
 			//Calculate net enthalpy for each temperature interval	
@@ -46,33 +53,16 @@ public class CompositeCurve extends LineGraph {
 		}
 		
 		return streamCurveDataPoint;
-	}	
-	private float[] createStreamTempIntervals(String streamType){
-		ArrayList<Float> tempVec = new ArrayList<Float>();
-		float[] tempVec_array;
-		
-		for(Stream stream:streamProcess.streams.values()){		
-			if(stream.getType().equals(streamType)){
-				if(!tempVec.contains(stream.getInletTemp())){
-					tempVec.add(stream.getInletTemp());
-				}
-				if(!tempVec.contains(stream.getOutletTemp())){
-					tempVec.add(stream.getOutletTemp());
-				}
-			}
-		}	
-		
-		Collections.sort(tempVec);	
-		tempVec_array = new float[tempVec.size()];
-		for(int i=0;i<tempVec.size();i++){
-			tempVec_array[i] = tempVec.get(i);
-		}	
-		
-		return tempVec_array;
+	}
+	private List<Double> createStreamIntervalTemps(String streamType){
+		return java.util.stream.Stream.concat(
+				streams.stream().filter(s -> s.getType().equalsIgnoreCase(streamType)).map(s -> s.getSourceTemp()),
+				streams.stream().filter(s -> s.getType().equalsIgnoreCase(streamType)).map(s -> s.getTargetTemp()))
+				.distinct().sorted().collect(Collectors.toList());
 	}
 	private void separateStreamCurvesByPinch(){
 		for(int i=0; i<coldStreamCurveDataPoints.length; i++){
-			coldStreamCurveDataPoints[i][0] += coldStreamCurveDataPoints[i][0] + (streamProcess.getProblemTable().getQH() - streamProcess.getInitialHotUtility()) ;
+			coldStreamCurveDataPoints[i][0] -= minHotUtility ;
 		}
 	}
 	
@@ -81,10 +71,10 @@ public class CompositeCurve extends LineGraph {
 	}
 
 	//
-	public float[][] getColdStreamCurveDataPoints() {
+	public double[][] getColdStreamCurveDataPoints() {
 		return coldStreamCurveDataPoints;
 	}
-	public float[][] getHotStreamCurveDataPoints() {
+	public double[][] getHotStreamCurveDataPoints() {
 		return hotStreamCurveDataPoints;
 	}
 }

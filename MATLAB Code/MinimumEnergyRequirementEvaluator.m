@@ -21,6 +21,7 @@
     c = [95, 129.9, 35.7, 35.5;
          450, 40, 450, 40;
          2832, 249.3, 2552.7, 183.2]; 
+    %c = zeros(0,4) % no columns 
      
 %%%%HEAT INTEGRATION 
     disp('');
@@ -28,8 +29,8 @@
 
     %%
     deltaTMin = 10.0;
-    qH_initial = 0;  
     
-    [correctedQH, correctedQC, unshiftedPinchTemps, shiftedPinchTemps] = HeatIntegrator(deltaTMin, qH_initial, s, c, true, true);
+    [minQH, minQC, unshiftedPinchTemps, shiftedPinchTemps] = HeatIntegrator(deltaTMin, s, c, true, false);
+
  
     
