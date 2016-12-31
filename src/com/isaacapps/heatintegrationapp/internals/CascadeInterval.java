@@ -6,69 +6,39 @@ import java.util.List;
 
 import com.isaacapps.heatintegrationapp.internals.energytransferelements.EnergyTransferElement;
 
-public class CascadeInterval {
+public class CascadeInterval extends EnergyTransferElement {
 	private int cascadeIndex;
-	private double temp1;
-	private double temp2;
-	private double totalCP;
-	private double heatLoad;
 	private double cascadeEnergy;
-	private String type;
 	private List<EnergyTransferElement> energyTransfererElementsCrossingInterval;
 
 	//
-	public CascadeInterval(double temp1, double temp2, double cP, double heatLoad, double cascadeEnergy, String type, int cascadeIndex) {
+	public CascadeInterval(double temp1, double temp2, double totalCP, double heatLoad, double cascadeEnergy, String type, int cascadeIndex) throws DefinedPropertiesException {
+		super(type, temp1, temp2, totalCP, heatLoad, 0.0);
 		this.cascadeIndex = cascadeIndex;
-		this.temp1 = temp1;
-		this.temp2 = temp2;
-		this.totalCP = cP;
-		this.heatLoad = heatLoad;
 		this.cascadeEnergy = cascadeEnergy;
-		this.type = type;
+		setName(type);
 		this.energyTransfererElementsCrossingInterval = new ArrayList<>();
 	}
-
+	
 	//
-	public double getTemp1() {
-		return temp1;
+	@Override
+	protected void calculateUnknownProperties(){
+		//Most necessary calculations would have already been done by the problem table and they are assumed to be correct.
+		setShiftTemps(deltaTMin);
 	}
-	public void setTemp1(double temp1) {
-		this.temp1 = temp1;
+	 
+	@Override
+	protected void determineType(){
+		//Type needs to be the same as name, so type should actually be set when name is set.
 	}
 	
-	public double getTemp2() {
-		return temp2;
-	}
-	public void setTemp2(double temp2) {
-		this.temp2 = temp2;
-	}
 
-	public double getTotalCP() {
-		return totalCP;
-	}
-	public void setTotalCP(double totalCP) {
-		this.totalCP = totalCP;
-	}
-
-	public double getHeatLoad() {
-		return heatLoad;
-	}
-	public void setHeatLoad(double heatLoad) {
-		this.heatLoad = heatLoad;
-	}
-
+	//
 	public double getCascadeEnergy() {
 		return cascadeEnergy;
 	}
 	public void setCascadeEnergy(double cascadeEnergy) {
 		this.cascadeEnergy = cascadeEnergy;
-	}
-
-	public String getType() {
-		return type;
-	}
-	public void setType(String type) {
-		this.type = type;
 	}
 	
 	public int getCascadeIndex(){
@@ -79,10 +49,25 @@ public class CascadeInterval {
 		return energyTransfererElementsCrossingInterval;
 	}
 	
+	public void setName(String name){
+		this.name = name;
+		this.type = name;
+	}
+	
+	@Override
+	public void setShiftTemps(double deltaTMin){
+		sourceShiftTemp = sourceTemp;
+		targetShiftTemp = targetTemp;
+	}
+	
 	//
 	public String toString(){
-		return String.format("\"cascadeInterval\":{\"index\": %d, \"temp1\": %f, \"temp2\": %f, \"totalCP\": %f, \"heatLoad\": %f, \"cascadingEnergy\": %f, \"type\": \"%s\", \"crossingElements\": [%s]}"
-				             ,cascadeIndex, temp1, temp2, totalCP, heatLoad, cascadeEnergy
-				             , energyTransfererElementsCrossingInterval.stream().map(et->et.toString()).reduce((prev, curr)->prev+","+curr.substring(curr.indexOf(":")+1)).orElse(""));
+		String etElemObj = super.toString().substring(super.toString().indexOf(":")); 
+		return String.format("\"cascadeInterval\":{%s, \"index\": %d, \"cascadingEnergy\": %f, \"crossingElements\": [%s]}"
+						     ,etElemObj.substring(1, etElemObj.length())
+				             ,cascadeIndex, cascadeEnergy
+				             , energyTransfererElementsCrossingInterval.stream().map(et->et.toString())
+				                                                                .reduce((prev, curr)->prev+","+curr.substring(curr.indexOf(":")+1))
+				                                                                .orElse(""));
 	}
 }

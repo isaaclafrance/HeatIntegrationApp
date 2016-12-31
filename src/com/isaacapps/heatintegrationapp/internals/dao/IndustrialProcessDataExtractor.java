@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import com.isaacapps.heatintegrationapp.internals.DefinedPropertiesException;
 import com.isaacapps.heatintegrationapp.internals.HXNetwork;
 import com.isaacapps.heatintegrationapp.internals.IndustrialProcess;
 import com.isaacapps.heatintegrationapp.internals.energytransferelements.*;
@@ -16,11 +17,10 @@ public class IndustrialProcessDataExtractor {
 		
 	}
 	
-	public IndustrialProcess readIndustrialProcess(){
+	public IndustrialProcess readIndustrialProcess() throws DefinedPropertiesException{
 
 		IndustrialProcess industrialProcess = new IndustrialProcess(readStreamsFromFile(), readColumnsFromFile(), readDeltaTMin(), readPreMERHotUtility(), readPreMERColdUtility());
-		HXNetwork hxNetwork = new HXNetwork(industrialProcess.getProblemTable(), readHXExchangersFromFile());
-		industrialProcess.setHXNetwork(hxNetwork);		
+		industrialProcess.setHXNetwork(new HXNetwork(industrialProcess.getProblemTable(), readHXExchangersFromFile()));		
 		
 		return industrialProcess;
 	}

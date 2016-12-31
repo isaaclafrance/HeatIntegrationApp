@@ -1,7 +1,6 @@
 package com.isaacapps.heatintegrationapp.internals;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import com.isaacapps.heatintegrationapp.graphics.HXNetworkDiagram;
@@ -13,19 +12,22 @@ public class HXNetwork {
 	private HXNetworkDiagram hxNetworkDiagram;
 	
 	//
+	public HXNetwork(){
+		heatExchangers = new ArrayList<HeatExchanger>();
+	}
 	public HXNetwork(ProblemTable problemTable){
-		this.problemTable = problemTable;
-		heatExchangers = new ArrayList<>();
-		designDesignNetwork();
+		this();
+		setProblemTable(problemTable);
 	}
 	public HXNetwork(ProblemTable problemTable, List<HeatExchanger> hxExchangers){
-		this.problemTable = problemTable;
-		heatExchangers = hxExchangers;
-		getHXNetworkDiagram().updateDiagram();
+		//If a non-empty list of heat exchangers is already given, then assume it correct for the given problem table.
+		//This prevent a possibly resource and time intensive  calculation from have to be done.
+		setHeatExchangers(hxExchangers);
+		setProblemTable(problemTable);
 	}
 	
 	//
-	public boolean designDesignNetwork(){
+	public boolean designHXNetwork(){
 		boolean solutionPossible = false;
 		
 		//TODO: Potentially Use a Genetic Algorithm Method to Find Network Solutions When Area and Cost Optimizations are Necessary
@@ -46,6 +48,17 @@ public class HXNetwork {
 	
 	public List<HeatExchanger> getHeatExchangers(){
 		return heatExchangers;
+	}
+	public void setHeatExchangers(List<HeatExchanger> heatExchangers){
+		this.heatExchangers = heatExchangers;
+		getHXNetworkDiagram().updateDiagram();
+	}
+	
+	public void setProblemTable(ProblemTable problemTable){
+		if(heatExchangers.isEmpty() || this.problemTable != problemTable){
+			this.problemTable = problemTable;
+			designHXNetwork();
+		}
 	}
 	
 	//

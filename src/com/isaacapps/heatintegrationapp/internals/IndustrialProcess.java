@@ -18,7 +18,7 @@ public class IndustrialProcess {
 	private double preMERColdUtility;
 	
 	//
-	public IndustrialProcess(List<Stream> streams, List<Column> columns, double defaultDeltaTMin, double preMERHotUtility, double preMERColdUtility){
+	public IndustrialProcess(List<Stream> streams, List<Column> columns, double defaultDeltaTMin, double preMERHotUtility, double preMERColdUtility) throws DefinedPropertiesException{
 		this.streamsMap = new HashMap<String, Stream>();
 		for(Stream stream:streams){
 			stream.setShiftTemps(defaultDeltaTMin);
@@ -37,33 +37,33 @@ public class IndustrialProcess {
 		
 		hxNetwork = new HXNetwork(problemTable);	
 	}
-	public IndustrialProcess(double defaultDeltaTMin, double preMERHotUtility, double preMERColdUtility){
+	public IndustrialProcess(double defaultDeltaTMin, double preMERHotUtility, double preMERColdUtility) throws DefinedPropertiesException{
 		this(new ArrayList<>(), new ArrayList<>(), defaultDeltaTMin, preMERHotUtility, preMERColdUtility );
 	}
 	
 	//
-	public void addStream(Stream stream){
+	public void addStream(Stream stream) throws DefinedPropertiesException{
 		streamsMap.put(stream.getName(), stream).setIndustrialProcessRef(this);
 		updateAll();
 	}
-	public void removeStream(String streamName){
+	public void removeStream(String streamName) throws DefinedPropertiesException{
 		streamsMap.remove(streamName).setIndustrialProcessRef(null);
 		updateAll();
 	}
 	
-	public void addColumn(Column column){
+	public void addColumn(Column column) throws DefinedPropertiesException{
 		columnsMap.put(column.getName(), column);
 		updateAll();
 	}
-	public void removeColumn(String columnName){
+	public void removeColumn(String columnName) throws DefinedPropertiesException{
 		columnsMap.remove(columnName);
 		updateAll();
 	}
 	
 	//
-	public void updateAll(){
+	public void updateAll() throws DefinedPropertiesException{
 		problemTable.performFeasibleEnergyCascade();
-		hxNetwork.designDesignNetwork();	
+		hxNetwork.designHXNetwork();	
 	}
 	
 	//
@@ -83,12 +83,12 @@ public class IndustrialProcess {
 		return problemTable.getUnshiftedPinchTemps();
 	}
 		
-	public void setDeltaTMin(double deltaTMin){
+	public void setDeltaTMin(double deltaTMin) throws DefinedPropertiesException{
 		streamsMap.values().stream().forEach(s -> s.setShiftTemps(deltaTMin));
 		columnsMap.values().stream().forEach(c -> c.setShiftTemps(deltaTMin));
 		
 		problemTable.setDeltaTMin(deltaTMin);
-		hxNetwork.designDesignNetwork();
+		hxNetwork.designHXNetwork();
 	}
 	public double getDeltaTMin(){
 		return problemTable.getDeltaTMin();
@@ -102,14 +102,15 @@ public class IndustrialProcess {
 		return hxNetwork;
 	}
 	public void setHXNetwork(HXNetwork hxNetwork){
+		hxNetwork.setProblemTable(problemTable);
 		this.hxNetwork = hxNetwork;
 	}
 	
-	public Map<String, Stream> getStreamsMap(){
-		return streamsMap;
+	public Stream getStream(String name){
+		return streamsMap.get(name);
 	}
-	public Map<String, Column> getColumnsMap(){
-		return columnsMap;
+	public Column getColumn(String name){
+		return columnsMap.get(name);
 	}
 	
 	//
@@ -123,14 +124,21 @@ public class IndustrialProcess {
 	
 	//////////
 	public static void main(String[] args) throws DefinedPropertiesException{
-		ArrayList<Stream> streams = new ArrayList<Stream>();
-		streams.add(new Stream("H1", 230.0, 65.0, 1.1, 0.0));
-		streams.add(new Stream("H2", 122.85, 391.85, 3.25, 0.0));
-		streams.add(new Stream("C1", 45.0, 590.0, 0.18, 0.0));
+		List<Stream> streams = new ArrayList<Stream>();
+		streams.add(new Stream("H1", 270.0f, 58.0f, 0.1f, 0.0f));
+		streams.add(new Stream("H2", 220.0f, 60.0f, 10.22f, 0.0f));
+		streams.add(new Stream("H3", 252.0f, 241.0f, 4.75f, 0.0f));
+		streams.add(new Stream("H4", 192.85f, 131.85f, 5.25f, 0.0f));
+		streams.add(new Stream("C1", 46.0f, 170.0f, 0.98f, 0.0f));
+		streams.add(new Stream("C2", 160.0f, 240.0f, 10.3f, 0.0f));
+		streams.add(new Stream("C3", 25.0f, 35.0f, 11.47f, 0.0f));
+		streams.add(new Stream("H5", 444.0f, 70.0f, 0.18f, 0.0f));
+		streams.add(new Stream("H6", 165.0f, 20.0f, 10.3f, 0.0f));
+		streams.add(new Stream("C4", 25.0f, 35.0f, 1.47f, 0.0f));
 
-		
-		ArrayList<Column> columns = new ArrayList<Column>();
-		columns.add(new Column( new double[]{20.0,45.6}, new double[]{450.0, 500.0}, new double[]{20.0, 34.0}, new double[]{250.0, 350.0} ));
+		List<Column> columns = new ArrayList<Column>();
+		columns.add(new Column( new double[]{50.0f}, new double[]{550.0f}, new double[]{60.0f}, new double[]{350.0f} ));
+		columns.add(new Column( new double[]{13.0f}, new double[]{270.0f}, new double[]{40.0f}, new double[]{750.0f} ));
 		
 		IndustrialProcess ip = new IndustrialProcess(streams, columns, 10.0, 0.0, 0.0);
 		System.out.println("Hot Utility: " + ip.getMinimumHotUtility());

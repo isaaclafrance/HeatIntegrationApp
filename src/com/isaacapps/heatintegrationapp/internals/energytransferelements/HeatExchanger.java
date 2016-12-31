@@ -14,14 +14,14 @@ public class HeatExchanger extends EnergyTransferElement {
 	
 	public HeatExchanger(double sourceTemp, double targetTemp, double cp, double heatLoad)
 			throws DefinedPropertiesException {
-		this("Heat Exchange ", sourceTemp, targetTemp, cp, heatLoad);
-		name += num;
+		this("Heat Exchanger ", sourceTemp, targetTemp, cp, heatLoad);
+		name += ID;
 	}
 	
 	//
 	@Override
 	protected void determineType(){
-		type = "Heat Exchnager";
+		type = "Heat Exchanger";
 	}
 	
 
@@ -51,13 +51,13 @@ public class HeatExchanger extends EnergyTransferElement {
 	
 	@Override
 	public double getSourceTemp(){
-		//Temperature difference between to two counter-current or co-current streams at terminus.
+		//Temperature difference between two counter-current or co-current streams at terminus.
 		return super.getSourceTemp();
 	}
 	
 	@Override
 	public double getTargetTemp(){
-		//Temperature difference between to two counter-current or co-current streams at terminus.
+		//Temperature difference between two counter-current or co-current streams at terminus.
 		return super.getTargetTemp();
 	}
 	
@@ -70,6 +70,6 @@ public class HeatExchanger extends EnergyTransferElement {
 	@Override
 	public String toString(){
 		String etElemObj = super.toString().substring(super.toString().indexOf(":")); 
-		return String.format("\"heatExchange\": {%s, \"area\": %f}", area, etElemObj.substring(1, etElemObj.length()));
+		return String.format("\"heatExchange\": {%s, \"area\": %f, \"areaUnit\": %s}",etElemObj.substring(1, etElemObj.length()), area, areaUnit);
 	}
 }

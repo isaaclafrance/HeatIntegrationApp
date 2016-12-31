@@ -4,7 +4,6 @@ import static org.junit.Assert.*;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -22,6 +21,8 @@ public class ProblemTableTest {
 
 	@Before
 	public void setUp() throws Exception {
+		double deltaTMin = 10.0f;
+		
 		List<Stream> streams = new ArrayList<Stream>();
 		streams.add(new Stream("H1", 270.0f, 35.0f, 0.1f, 0.0f));
 		streams.add(new Stream("H2", 220.0f, 60.0f, 0.22f, 0.0f));
@@ -32,9 +33,8 @@ public class ProblemTableTest {
 		streams.add(new Stream("C3", 25.0f, 35.0f, 1.47f, 0.0f));
 
 		List<Column> columns = new ArrayList<Column>();
-		columns.add(new Column( new double[]{40.0f}, new double[]{450.0f}, new double[]{20.0f}, new double[]{250.0f} ));
+		columns.add(new Column( "Column 1", new double[]{40.0f}, new double[]{450.0f}, new double[]{20.0f}, new double[]{250.0f}, deltaTMin ));
 
-		double deltaTMin = 10.0f;
 		streams.stream().forEach(s -> s.setShiftTemps(deltaTMin));
 		columns.stream().forEach(c -> c.setShiftTemps(deltaTMin));
 
@@ -43,12 +43,11 @@ public class ProblemTableTest {
 
 	@Test
 	public void test_CascadeInterval_Temperatures() {
-		// Temperatures verifications
-		Object[] expectedIntervalTemps = new Object[] { 265.0, 247.0, 246.0, 245.0, 215.0, 195.0, 187.85000610351562,
-				186.85000610351562, 155.0, 55.0, 45.00001, 45.0, 40.0, 30.0, 15.00001, 15.0 };
-		List<Double> actualIntervalTemps = problemTable.getCascadeIntervals().stream().map(cI -> cI.getTemp2())
+		Object[] expectedIntervalTemps = new Object[] { 265.0, 247.0, 246.0, 245.0, 215.0, 195.0, 187.85
+				,186.85, 155.0, 55.0, 45.0, 45.0, 40.0, 30.0, 15.0, 15.0 };
+		List<Double> actualIntervalTemps = problemTable.getCascadeIntervals().stream().map(cI -> cI.getTargetShiftTemp())
 				.collect(Collectors.toList());
-		actualIntervalTemps.add(0, problemTable.getCascadeIntervals().get(0).getTemp1());
+		actualIntervalTemps.add(0, problemTable.getCascadeIntervals().get(0).getSourceShiftTemp());
 
 		assertArrayEquals("Cascade interval temperature elements do not match.", expectedIntervalTemps,
 				actualIntervalTemps.toArray());
@@ -59,8 +58,8 @@ public class ProblemTableTest {
 
 	@Test
 	public void test_CascadeInterval_HeatLoads() {
-		Object[] expectedHeatLoads = new Object[] { 1.8000000268220901, 4.850000001490116, 0.10000000149011612, -6.000000312924385,
-				0.3999997675418854, -1.1439991576819466, 5.089999981224537, -5.0960015745611145, 13.999999314546585, -0.7999992566243557 , -450.0, 0.5000000074505806, -13.700000271201134, 0.0,  250.0 };
+		Object[] expectedHeatLoads = new Object[] { 1.8, 4.85, 0.1, -6.0, 0.4, -1.144, 5.09, -5.096, 14.0
+				, -0.8 , -450.0, 0.5, -13.7, 0.0,  250.0 };
 		List<Double> actualHeatLoads = problemTable.getCascadeIntervals().stream()
 				.map(cI -> cI.getHeatLoad()).collect(Collectors.toList());
 
@@ -73,8 +72,8 @@ public class ProblemTableTest {
 
 	@Test
 	public void test_CascadeInterval_CascadingEnergies() {
-		Object[] expectedCascadingEnergies = new Object[] { 451.8000014992491, 456.6500015007392, 456.75000150222934, 450.75000118930495, 451.15000095684684,
-				450.0060017991649, 455.09600178038943, 450.0000002058283, 463.9999995203749, 463.20000026375055, 13.200000263750553, 13.700000271201134, 0.0, 0.0 , 250.0 };
+		Object[] expectedCascadingEnergies = new Object[] { 451.8, 456.65, 456.75, 450.75, 451.15,
+				450.006, 455.096, 450.0, 464.0, 463.2, 13.2, 13.7, 0.0, 0.0 , 250.0 };
 		List<Double> actualCascadingEnergies = problemTable.getCascadeIntervals().stream()
 				.map(cI -> cI.getCascadeEnergy()).collect(Collectors.toList());
 
@@ -87,15 +86,14 @@ public class ProblemTableTest {
 
 	@Test
 	public void test_CascadeInterval_Types() {
-		/*double[] expectedHeatLoads = new double[] { 1.8000001f, 4.85f, 0.1f, -6.0000005f, 0.39999962f,
-				-1.1439992f, 5.09f, -5.0960016f, 13.999998f, -0.79999214f, -450.0f, 0.5f, -13.7f, 0.0f, 250.0f };
-		List<Double> actualHeatLoads = problemTable.getCascadeIntervals().stream()
-				.map(cI -> cI.getHeatLoad()).collect(Collectors.toList());
-		
-		String[] expectedIntervalTypes = new double[] { 451.8f, 456.65f, 456.75f, 450.75f, 451.15f,
-				450.00598f, 455.09598f, 449.99997f, 463.99997f, 463.19998f, 13.199982f, 13.699982f, -1.8119812E-5f, -1.8119812E-5f, 249.99998f };
+		Object[] expectedIntervalTypes = new String[] { "Stream Interval Containing: H1", "Stream Interval Containing: H1, H3", "Stream Interval Containing: H1"
+				    , "Stream Interval Containing: C2, H1", "Stream Interval Containing: C2, H1, H2", "Stream Interval Containing: C1, C2, H1, H2", "Stream Interval Containing: C1, C2, H1, H2, H4"
+				    , "Stream Interval Containing: C1, C2, H1, H2", "Stream Interval Containing: C1, H1, H2", "Stream Interval Containing: C1, H1"
+				    , "Column Interval Containing: Reboiler of Column 1", "Stream Interval Containing: H1", "Stream Interval Containing: C3, H1", "Stream Interval Containing: ", "Column Interval Containing: Condenser of Column 1"};
 		List<String> actualIntervalTypes = problemTable.getCascadeIntervals().stream()
-				.map(cI -> cI.getType()).collect(Collectors.toList());*/
+				.map(cI -> cI.getType()).collect(Collectors.toList());
+		
+		assertArrayEquals(expectedIntervalTypes, actualIntervalTypes.toArray());
 	}
 	
 	@Test

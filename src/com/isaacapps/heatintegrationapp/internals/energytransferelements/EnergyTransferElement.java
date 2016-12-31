@@ -1,16 +1,18 @@
 package com.isaacapps.heatintegrationapp.internals.energytransferelements;
 
 import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
 
 import com.isaacapps.heatintegrationapp.internals.DefinedPropertiesException;
 
 public class EnergyTransferElement {
-	private double heatLoad; // kW
-	private double sourceTemp, sourceShiftTemp, targetTemp, targetShiftTemp, deltaTMin; // K
+	protected double heatLoad; // kW
+	protected double sourceTemp, sourceShiftTemp, targetTemp, targetShiftTemp, deltaTMin; // K
 	protected double heatTransferCoeff; // kW * K^-1
 	protected String name, heatLoadUnit, tempUnit,  type;
 	private static int numCount = 1;
-	protected final int num;  
+	protected final int ID;  
 	
 	//
 	public EnergyTransferElement(String name, double sourceTemp, double targetTemp, double heatTransferCoeff, double heatLoad, double deltaTMin) throws DefinedPropertiesException{
@@ -19,23 +21,21 @@ public class EnergyTransferElement {
 		this.targetTemp = targetTemp;
 		this.heatLoad = heatLoad;
 		this.heatTransferCoeff = heatTransferCoeff;
+		this.deltaTMin = deltaTMin;
 		heatLoadUnit = "kW";
 		tempUnit = "kW/K";
 		
 		calculateUnknownProperties();
-		determineType();
-		
-		setShiftTemps(deltaTMin);
-		
-		num = numCount++;
+			
+		ID = numCount++;
 	}
-	public EnergyTransferElement(String name, double sourceTemp, double targetTemp, double cp, double heatLoad) throws DefinedPropertiesException{
-		this(name, sourceTemp, targetTemp, cp, heatLoad, 0.0f);
-		name = name + num ;
+	public EnergyTransferElement(String name, double sourceTemp, double targetTemp, double heatTransferCoeff, double heatLoad) throws DefinedPropertiesException{
+		this(name, sourceTemp, targetTemp, heatTransferCoeff, heatLoad, 0.0);
+		name = name + ID ;
 	}	
-	public EnergyTransferElement(double sourceTemp, double targetTemp, double cp, double heatLoad) throws DefinedPropertiesException{
-		this("Energy Transfer Element ", sourceTemp, targetTemp, cp, heatLoad, 0.0f);
-		name = name + num ;
+	public EnergyTransferElement(double sourceTemp, double targetTemp, double heatTransferCoeff, double heatLoad) throws DefinedPropertiesException{
+		this("Energy Transfer Element ", sourceTemp, targetTemp, heatTransferCoeff, heatLoad, 0.0);
+		name = name + ID ;
 	}
 	
 	//
@@ -43,6 +43,10 @@ public class EnergyTransferElement {
 		calculateUnknownProperties(name);
 	}
 	private void calculateUnknownProperties(String entityName) throws DefinedPropertiesException{
+		//Zero is suitable to denote unspecified temperature because the unit is K and generally it is thermodynamically impossible to reach absolute zero.
+		//Zero is suitable to denote unspecified heat because a zero heat stream would not be thermodynamically important and therefore would not considered in heat integration considerations.
+		//Zero is suitable to denote unspecified heat transfer coeff because such a stream would not be thermodynamically important.
+		MathContext mc = new MathContext(2, RoundingMode.UP);
 		int[] propStates = new int[]{(sourceTemp==0.0f)?0:1,
 									 (targetTemp==0.0f)?0:1,
 									 (getHeatTransferCoeff()==0.0f)?0:1,
@@ -56,10 +60,11 @@ public class EnergyTransferElement {
 		else if(propStatesSum == 4){
 			double minDiff = 0.000001 ;
 			
-			boolean state = new BigDecimal(sourceTemp).subtract(new BigDecimal(targetTemp).subtract(new BigDecimal(heatLoad).divide(new BigDecimal(getHeatTransferCoeff())))).abs().doubleValue() < minDiff  
-							&& new BigDecimal(targetTemp).subtract(new BigDecimal(targetTemp).add(new BigDecimal(heatLoad).divide(new BigDecimal(getHeatTransferCoeff())))).abs().doubleValue() < minDiff
-						    && new BigDecimal(getHeatTransferCoeff()).subtract( new BigDecimal(heatLoad).divide(new BigDecimal(targetTemp).subtract(new BigDecimal(sourceTemp))).abs()).abs().doubleValue() < minDiff
-							&& new BigDecimal(heatLoad).subtract(new BigDecimal(getHeatTransferCoeff()).multiply(new BigDecimal(targetTemp).subtract(new BigDecimal(sourceTemp)))).abs().doubleValue() < minDiff;
+			//For accuracy sake, BigDecimal needs to be used for calculations
+			boolean state = new BigDecimal(sourceTemp).subtract(new BigDecimal(targetTemp).subtract(new BigDecimal(heatLoad).divide(new BigDecimal(getHeatTransferCoeff()),mc))).abs().compareTo(new BigDecimal(minDiff)) == -1 
+							&& new BigDecimal(targetTemp).subtract(new BigDecimal(sourceTemp).add(new BigDecimal(heatLoad).divide(new BigDecimal(getHeatTransferCoeff()),mc))).abs().compareTo(new BigDecimal(minDiff)) == -1 
+						    && new BigDecimal(getHeatTransferCoeff()).subtract( new BigDecimal(heatLoad).divide(new BigDecimal(targetTemp).subtract(new BigDecimal(sourceTemp)),mc).abs()).compareTo(new BigDecimal(minDiff)) == -1 
+							&& new BigDecimal(heatLoad).subtract(new BigDecimal(getHeatTransferCoeff()).multiply(new BigDecimal(targetTemp).subtract(new BigDecimal(sourceTemp)))).abs().compareTo(new BigDecimal(minDiff)) == -1 ;
 				
 			if(!state){
 				throw new DefinedPropertiesException("Properties incorrectly defined. ", entityName);
@@ -67,18 +72,20 @@ public class EnergyTransferElement {
 		}
 		else{
 			if(propStates[0]==0){
-				sourceTemp = new BigDecimal(targetTemp).subtract(new BigDecimal(heatLoad).divide(new BigDecimal(getHeatTransferCoeff()))).doubleValue();
+				setSourceTemp(new BigDecimal(targetTemp).subtract(new BigDecimal(heatLoad).divide(new BigDecimal(getHeatTransferCoeff()),mc)).doubleValue());
 			}
 			else if(propStates[1]==0){
-				targetTemp = new BigDecimal(targetTemp).add(new BigDecimal(heatLoad).divide(new BigDecimal(getHeatTransferCoeff()))).doubleValue();
+				setTargetTemp(new BigDecimal(sourceTemp).add(new BigDecimal(heatLoad).divide(new BigDecimal(getHeatTransferCoeff()),mc)).doubleValue());
 			}
 			else if(propStates[2]==0){
-				setHeatTransferCoeff( new BigDecimal(heatLoad).divide(new BigDecimal(targetTemp).subtract(new BigDecimal(sourceTemp))).abs().doubleValue());
+				setHeatTransferCoeff( new BigDecimal(heatLoad).divide(new BigDecimal(targetTemp).subtract(new BigDecimal(sourceTemp)),mc).abs().doubleValue());
 			}
 			else{
 				heatLoad = new BigDecimal(getHeatTransferCoeff()).multiply(new BigDecimal(targetTemp).subtract(new BigDecimal(sourceTemp))).doubleValue();
 			}
 		}
+		determineType();
+		setShiftTemps(deltaTMin);
 	}
 	protected void determineType(){
 		if(sourceTemp<targetTemp){
@@ -88,9 +95,6 @@ public class EnergyTransferElement {
 		else if(sourceTemp>targetTemp){
 			type = "Hot";
 			this.heatLoad = -Math.abs(heatLoad);
-		}
-		else{
-			type = "Utility";
 		}
 	}
 	
@@ -105,7 +109,6 @@ public class EnergyTransferElement {
 	public void setSourceTemp(double sourceTemp) throws DefinedPropertiesException{
 		this.sourceTemp = sourceTemp;
 		calculateUnknownProperties();
-		determineType();
 	}
 	
 	public double getTargetTemp(){
@@ -113,8 +116,7 @@ public class EnergyTransferElement {
 	}
 	public void setTargetTemp(double targetTemp) throws DefinedPropertiesException{
 		this.targetTemp = targetTemp;
-		calculateUnknownProperties();
-		determineType();
+		calculateUnknownProperties(); //Make sure newly set temp is correct based on existing properties
 	}
 	
 	public double getHeatLoad(){
@@ -122,8 +124,7 @@ public class EnergyTransferElement {
 	}
 	public void setHeatLoad(double heatLoad) throws DefinedPropertiesException{
 		this.heatLoad = heatLoad;
-		calculateUnknownProperties();
-		determineType();
+		calculateUnknownProperties(); //Make sure newly set temp is correct based on existing properties
 	}
 	
 	public void setShiftTemps(double deltaTMin){
@@ -159,10 +160,14 @@ public class EnergyTransferElement {
 		return name;
 	}
 	
+	public int getID(){
+		return ID;
+	}
+	
 	//
 	@Override
 	public String toString(){
-		return String.format("\"energyTransferElement\":{\"name\": \"%s\", \"num\": %d, \"type\": \"%s\", \"sourceTemp\": %f, \"targetTemp\": %f, \"enthalpyChange\": %f, \"heatTransferCoeff\": %f, \"tempUnit\": \"%s\", \"heatLoadUnit\": \"%s\"}"
-				             , name, num, type, sourceTemp, targetTemp, heatLoad, heatTransferCoeff, tempUnit, heatLoadUnit);
+		return String.format("\"energyTransferElement\":{\"name\": \"%s\", \"ID\": %d \"type\": \"%s\", \"sourceTemp\": %f, \"targetTemp\": %f, \"enthalpyChange\": %f, \"heatTransferCoeff\": %f, \"tempUnit\": \"%s\", \"heatLoadUnit\": \"%s\"}"
+				             , name, ID, type, sourceTemp, targetTemp, heatLoad, heatTransferCoeff, tempUnit, heatLoadUnit);
 	}
 }

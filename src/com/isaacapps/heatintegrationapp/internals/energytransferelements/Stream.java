@@ -21,12 +21,12 @@ public class Stream extends EnergyTransferElement {
 	}
 	public Stream(double sourceTemp, double targetTemp,  double cp, double enthalpyChange, double deltaTMin) throws DefinedPropertiesException{
 		this("", sourceTemp, targetTemp, cp, enthalpyChange, deltaTMin);
-		name = "Stream " + num;
+		name = "Stream " + ID;
 	}
 	
 	//
 	public boolean createSubStream(double heatLoad){
-		//Determines if the given substream can be a substream of the current stream based on energy contraints.
+		//Determines if the specified substream of the current stream based on energy constraints.
 		try{
 			Stream candidateSubStream = new Stream(getSourceTemp(), getTargetTemp(), 0.0f, heatLoad, getDeltaTMin());
 			if(candidateSubStream.getHeatLoad() < this.getHeatLoad()){
