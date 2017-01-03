@@ -4,7 +4,7 @@ import static org.junit.Assert.*;
 
 import org.junit.Test;
 
-import com.isaacapps.heatintegrationapp.internals.DefinedPropertiesException;
+import com.isaacapps.heatintegrationapp.internals.energytransferelements.DefinedPropertiesException;
 import com.isaacapps.heatintegrationapp.internals.energytransferelements.EnergyTransferElement;
 
 public class EnergyTransferElementTest {
@@ -13,20 +13,19 @@ public class EnergyTransferElementTest {
 	public void testCalculateUnknownPropertiesFails() {
 		try {
 			new EnergyTransferElement(1.0, 2.0, 3.0, 4.0);
-			fail("No DefinedProperty exception was for heat transfer element defined with improper properties.");
-		} catch (DefinedPropertiesException e) {
-		}
+			fail("No DefinedPropertyException was thrown for energy transfer element defined with improper properties.");
+		} catch (DefinedPropertiesException e) {}
 	}
 
 	@Test
 	public void testCalculateUnknownPropertiesSucceeds() {
 		try {
-			assertEquals("Heat load improperly calculated for heat transfer element.", -2.0, new EnergyTransferElement(2.0, 1.0, 2.0, 0.0).getHeatLoad(), 0.000001);
-			assertEquals("Heat transfer coeff improperly calculated for heat transfer element.", 2.0, new EnergyTransferElement(2.0, 1.0, 0.0, -2.0).getHeatTransferCoeff(), 0.000001);
-			assertEquals("Target temperature improperly calculated for heat transfer element.", 1.0, new EnergyTransferElement(2.0, 0.0, 2.0, -2.0).getTargetTemp(), 0.000001);
-			assertEquals("Source temperature improperly calulated for heat transfer element.", 2.0, new EnergyTransferElement(0.0, 1.0, 2.0, -2.0).getSourceTemp(), 0.000001);
+			assertEquals("Heat load improperly calculated for energy transfer element.", -2.0, new EnergyTransferElement(2.0, 1.0, 2.0, 0.0).getHeatLoad(), 0.000001);
+			assertEquals("Heat transfer coeff improperly calculated for energy transfer element.", 2.0, new EnergyTransferElement(2.0, 1.0, 0.0, -2.0).getHeatTransferCoeff(), 0.000001);
+			assertEquals("Target temperature improperly calculated for energy transfer element.", 1.0, new EnergyTransferElement(2.0, 0.0, 2.0, -2.0).getTargetTemp(), 0.000001);
+			assertEquals("Source temperature improperly calulated for energy transfer element.", 2.0, new EnergyTransferElement(0.0, 1.0, 2.0, -2.0).getSourceTemp(), 0.000001);
 		} catch (DefinedPropertiesException e) {
-			fail("A DefinedProperty exception was thrown for heat transfer element with properly defined properties.");
+			fail("A DefinedPropertyException was thrown for energy transfer element with properly defined properties.");
 		}
 	}
 	
@@ -36,7 +35,7 @@ public class EnergyTransferElementTest {
 			assertEquals("Type 'Cold' is not determined", "Cold", new EnergyTransferElement(1.0, 2.0, 3.0, 0.0).getType());
 			assertEquals("Type 'Hot' is not determined", "Hot", new EnergyTransferElement(2.0, 1.0, 3.0, 0.0).getType());
 		} catch (DefinedPropertiesException e) {
-			fail("A DefinedProperty exception was thrown for heat transfer element with properly defined properties.");
+			fail("A DefinedPropertyException was thrown for energy transfer element with properly defined properties.");
 		}
 	}
 
@@ -52,7 +51,7 @@ public class EnergyTransferElementTest {
 			assertEquals("Hot source shift temperature is incorrect", 15.0, hotET.getSourceShiftTemp(), 0.000001);
 			assertEquals("Hot target shift temperature is incorrect", 5.0, hotET.getTargetShiftTemp(), 0.000001);
 		} catch (DefinedPropertiesException e) {
-			fail("A DefinedProperty exception was thrown for heat transfer element with properly defined properties.");
+			fail("A DefinedPropertyException was thrown for energy transfer element with properly defined properties.");
 		}
 	}
 
