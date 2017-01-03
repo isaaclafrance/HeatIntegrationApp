@@ -30,7 +30,7 @@ public class HXNetwork {
 	public boolean designHXNetwork(){
 		boolean solutionPossible = false;
 		
-		//TODO: Potentially Use a Genetic Algorithm Method to Find Network Solutions When Area and Cost Optimizations are Necessary
+		//TODO: Use an appropriate mathematical optimization technique to find network solutions when area, energy, and cost optimizations are necessary
 		
 		getHXNetworkDiagram().updateDiagram();
 		
