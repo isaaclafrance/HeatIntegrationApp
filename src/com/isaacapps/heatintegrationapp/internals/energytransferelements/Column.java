@@ -3,8 +3,6 @@ package com.isaacapps.heatintegrationapp.internals.energytransferelements;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.isaacapps.heatintegrationapp.internals.DefinedPropertiesException;
-
 public class Column {
 	public static double UTILITY_TEMP_DIFF = 0.00001;
 	private String name;

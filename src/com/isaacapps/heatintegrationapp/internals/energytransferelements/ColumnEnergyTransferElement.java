@@ -1,7 +1,5 @@
 package com.isaacapps.heatintegrationapp.internals.energytransferelements;
 
-import com.isaacapps.heatintegrationapp.internals.DefinedPropertiesException;
-
 public abstract class ColumnEnergyTransferElement extends EnergyTransferElement {
 	private Column column;
 	private String columnElementType;

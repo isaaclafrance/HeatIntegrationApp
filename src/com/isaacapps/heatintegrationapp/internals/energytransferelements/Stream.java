@@ -2,7 +2,6 @@ package com.isaacapps.heatintegrationapp.internals.energytransferelements;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import com.isaacapps.heatintegrationapp.internals.DefinedPropertiesException;
 import com.isaacapps.heatintegrationapp.internals.IndustrialProcess;
 
 
@@ -24,12 +23,16 @@ public class Stream extends EnergyTransferElement {
 		name = "Stream " + ID;
 	}
 	
-	//
-	public boolean createSubStream(double heatLoad){
-		//Determines if the specified substream of the current stream based on energy constraints.
-		try{
-			Stream candidateSubStream = new Stream(getSourceTemp(), getTargetTemp(), 0.0f, heatLoad, getDeltaTMin());
-			if(candidateSubStream.getHeatLoad() < this.getHeatLoad()){
+	/**
+	 * Create the specified substream for the current stream only if the energy constraints are not violated.
+	 * @param cp
+	 * @param heatLoad
+	 * @return Boolean indicating whether or not the substream was created.
+	 */
+	public boolean createSubStream(double cp, double heatLoad){
+		try{	
+			Stream candidateSubStream = new Stream(getSourceTemp(), getTargetTemp(), cp, heatLoad, getDeltaTMin());
+			if(Math.abs(heatLoad) > Math.abs(candidateSubStream.getHeatLoad())){
 				candidateSubStream.setParentStream(this);
 				subStreams.add(candidateSubStream);
 				industrialProcess.addStream(candidateSubStream);

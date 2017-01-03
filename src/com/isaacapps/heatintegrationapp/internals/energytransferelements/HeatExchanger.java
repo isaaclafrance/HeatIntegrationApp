@@ -1,7 +1,5 @@
 package com.isaacapps.heatintegrationapp.internals.energytransferelements;
 
-import com.isaacapps.heatintegrationapp.internals.DefinedPropertiesException;
-
 public class HeatExchanger extends EnergyTransferElement {
 	private double area;
 	private String areaUnit;
@@ -29,19 +27,32 @@ public class HeatExchanger extends EnergyTransferElement {
 	public double getArea(){
 		return area;
 	}
+	public String getAreaWithUnit(){
+		return getArea()+" "+getAreaUnit();
+	}
 	public void setArea(double area) throws DefinedPropertiesException{
 		this.area = area;
 		calculateUnknownProperties();
 	}
 	
+	public String getAreaUnit(){
+		return areaUnit;
+	}
+	
+	/**
+	 * Unlike base class this heat transfer coefficient is per area. 
+	 * @return Heat transfer coefficient WITH a partial Log Mean Temperature Difference correction applied.
+	 */
 	@Override
 	public double getHeatTransferCoeff(){
-		//Unlike base class this heat transfer coefficient is per area. Unit is kW/K/M^2 
-		//Add correction log mean temperature difference
-		return heatTransferCoeff / (double) Math.log(Math.abs(getSourceTemp() - getTargetShiftTemp()));
+		return heatTransferCoeff / (double) Math.log(getSourceTemp()/getTargetShiftTemp());
 	}
+	
+	/**
+	 * Unlike base class this heat transfer coefficient is per area. 
+	 * @return Heat transfer coefficient WITHOUT a partial Log Mean Temperature Difference correction applied.
+	 */
 	public double getHeatTransferCoeffWithoutLMTDCorrection(){
-		//Unlike base class this heat transfer coefficient is per area. 
 		return heatTransferCoeff;
 	}
 	@Override
@@ -50,26 +61,32 @@ public class HeatExchanger extends EnergyTransferElement {
 	}
 	
 	@Override
+	public String getHeatTransferCoeffUnit(){
+		return getHeatUnit() +"/"+ getTempUnit() +"/"+ getAreaUnit();
+	}
+	
+	/**
+	 * Temperature difference between two counter-current or co-current streams at terminus.
+	 */
+	@Override
 	public double getSourceTemp(){
-		//Temperature difference between two counter-current or co-current streams at terminus.
 		return super.getSourceTemp();
 	}
 	
+	
+	/**
+	 * Temperature difference between two counter-current or co-current streams at terminus.
+	 */
 	@Override
 	public double getTargetTemp(){
-		//Temperature difference between two counter-current or co-current streams at terminus.
 		return super.getTargetTemp();
 	}
 	
-	@Override
-	public void setShiftTemps(double deltaTMin){
-		
-	}
 	
 	//
 	@Override
 	public String toString(){
 		String etElemObj = super.toString().substring(super.toString().indexOf(":")); 
-		return String.format("\"heatExchange\": {%s, \"area\": %f, \"areaUnit\": %s}",etElemObj.substring(1, etElemObj.length()), area, areaUnit);
+		return String.format("\"heatExchange\": {%s, \"area\": %f, \"areaUnit\": %s}",etElemObj.substring(1, etElemObj.length()), getArea(), getAreaUnit());
 	}
 }

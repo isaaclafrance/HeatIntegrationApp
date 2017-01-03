@@ -1,7 +1,6 @@
-package com.isaacapps.heatintegrationapp.internals;
+package com.isaacapps.heatintegrationapp.internals.energytransferelements;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import com.isaacapps.heatintegrationapp.internals.energytransferelements.EnergyTransferElement;
@@ -37,6 +36,9 @@ public class CascadeInterval extends EnergyTransferElement {
 	public double getCascadeEnergy() {
 		return cascadeEnergy;
 	}
+	public String getCascadeEnergyWithUnit(){
+		return getCascadeEnergy()+" "+getHeatUnit();
+	}
 	public void setCascadeEnergy(double cascadeEnergy) {
 		this.cascadeEnergy = cascadeEnergy;
 	}
@@ -63,7 +65,7 @@ public class CascadeInterval extends EnergyTransferElement {
 	//
 	public String toString(){
 		String etElemObj = super.toString().substring(super.toString().indexOf(":")); 
-		return String.format("\"cascadeInterval\":{%s, \"index\": %d, \"cascadingEnergy\": %f, \"crossingElements\": [%s]}"
+		return String.format("\"cascadeInterval\": {%s, \"index\": %d, \"cascadingEnergy\": %f, \"crossingElements\": [%s]}"
 						     ,etElemObj.substring(1, etElemObj.length())
 				             ,cascadeIndex, cascadeEnergy
 				             , energyTransfererElementsCrossingInterval.stream().map(et->et.toString())

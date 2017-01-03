@@ -4,14 +4,14 @@ import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
 
-import com.isaacapps.heatintegrationapp.internals.DefinedPropertiesException;
-
 public class EnergyTransferElement {
+	private static int numCount = 1;
+	
 	protected double heatLoad; // kW
 	protected double sourceTemp, sourceShiftTemp, targetTemp, targetShiftTemp, deltaTMin; // K
 	protected double heatTransferCoeff; // kW * K^-1
-	protected String name, heatLoadUnit, tempUnit,  type;
-	private static int numCount = 1;
+	protected String heatUnit, tempUnit;
+	protected String name, type;
 	protected final int ID;  
 	
 	//
@@ -22,8 +22,8 @@ public class EnergyTransferElement {
 		this.heatLoad = heatLoad;
 		this.heatTransferCoeff = heatTransferCoeff;
 		this.deltaTMin = deltaTMin;
-		heatLoadUnit = "kW";
-		tempUnit = "kW/K";
+		this.heatUnit = "kW";
+		this.tempUnit = "K";
 		
 		calculateUnknownProperties();
 			
@@ -106,6 +106,9 @@ public class EnergyTransferElement {
 	public double getSourceTemp(){
 		return sourceTemp;
 	}
+	public String getSourceTempWithUnit(){
+		return getSourceTemp() +" "+ getTempUnit();
+	}
 	public void setSourceTemp(double sourceTemp) throws DefinedPropertiesException{
 		this.sourceTemp = sourceTemp;
 		calculateUnknownProperties();
@@ -114,6 +117,9 @@ public class EnergyTransferElement {
 	public double getTargetTemp(){
 		return targetTemp;
 	}
+	public String getTargetTempWithUnit(){
+		return getTargetTemp() +" "+ getTempUnit();
+	}
 	public void setTargetTemp(double targetTemp) throws DefinedPropertiesException{
 		this.targetTemp = targetTemp;
 		calculateUnknownProperties(); //Make sure newly set temp is correct based on existing properties
@@ -121,6 +127,9 @@ public class EnergyTransferElement {
 	
 	public double getHeatLoad(){
 		return heatLoad;
+	}
+	public String getHeatLoadWithUnit(){
+		return getHeatLoad() +" "+ heatUnit;
 	}
 	public void setHeatLoad(double heatLoad) throws DefinedPropertiesException{
 		this.heatLoad = heatLoad;
@@ -131,7 +140,7 @@ public class EnergyTransferElement {
 		if(type.equals("Cold")){
 			sourceShiftTemp = sourceTemp + deltaTMin/2;
 			targetShiftTemp = targetTemp + deltaTMin/2;
-		}else{
+		}else if(type.equals("Hot")){
 			sourceShiftTemp = sourceTemp - deltaTMin/2;
 			targetShiftTemp = targetTemp - deltaTMin/2;
 		}
@@ -140,8 +149,14 @@ public class EnergyTransferElement {
 	public double getSourceShiftTemp(){
 		return sourceShiftTemp;
 	}
+	public String getSourceShiftTempWithUnit(){
+		return getSourceTemp() +" "+ getTempUnit();
+	}
 	public double getTargetShiftTemp(){
 		return targetShiftTemp;
+	}
+	public String getTargetShiftTempWithUnit(){
+		return getTargetTemp() +" "+ getTempUnit();
 	}
 	
 	public double getDeltaTMin(){
@@ -151,9 +166,22 @@ public class EnergyTransferElement {
 	public double getHeatTransferCoeff(){
 		return heatTransferCoeff;
 	}
+	public String getHeatTransferCoeffWithUnit(){
+		return getHeatTransferCoeff() +" "+ getHeatTransferCoeffUnit();
+	}
 	public void setHeatTransferCoeff(double HeatTransferCoeff) throws DefinedPropertiesException{
 		this.heatTransferCoeff = HeatTransferCoeff;
 		calculateUnknownProperties();
+	}
+	
+	public String getHeatUnit(){
+		return heatUnit;
+	}
+	public String getTempUnit(){
+		return tempUnit;
+	}
+	public String getHeatTransferCoeffUnit(){
+		return getHeatUnit() + "/" + getTempUnit();
 	}
 	
 	public String getName(){
@@ -167,7 +195,7 @@ public class EnergyTransferElement {
 	//
 	@Override
 	public String toString(){
-		return String.format("\"energyTransferElement\":{\"name\": \"%s\", \"ID\": %d \"type\": \"%s\", \"sourceTemp\": %f, \"targetTemp\": %f, \"enthalpyChange\": %f, \"heatTransferCoeff\": %f, \"tempUnit\": \"%s\", \"heatLoadUnit\": \"%s\"}"
-				             , name, ID, type, sourceTemp, targetTemp, heatLoad, heatTransferCoeff, tempUnit, heatLoadUnit);
+		return String.format("\"energyTransferElement\": {\"name\": \"%s\", \"ID\":%d \"type\": \"%s\", \"sourceTemp\": \"%s\", \"targetTemp\": \"%s\", \"enthalpyChange\": \"%s\", \"heatTransferCoeff\": \"%s\"}"
+				             , name, ID, type, getSourceTempWithUnit(), getTargetTempWithUnit(), getHeatLoadWithUnit(), getHeatTransferCoeffWithUnit());
 	}
 }
