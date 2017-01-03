@@ -19,5 +19,3 @@ public class HomeActivity extends Activity {
 	}
 
 }
-
-//TODO: Create animation for sliding entry motion in the buttons from opposite side upon entering the HomeActivity
