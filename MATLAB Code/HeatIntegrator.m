@@ -1,8 +1,7 @@
 function [minQH, minQC, unshiftedPinchTemps, shiftedPinchTemps, cascadeIntervals] = HeatIntegrator(deltaTMin, s, c, isCascadeDisplayed, isGrandCompositeCurveDisplayed)
 
 %%Cascade Interval Matrix. (i,1)->temp1; (i,2)->temp2; (i,3)->CP; (i,4)->heat load; (i,5)->energy sent to next interval;
-%%(i,6)->if values is 1 then reboiler, else if value is 2 then condenser. 
-%%If reboiler then equal to 1, if condenser then equal 2, otherwise it equals 0.
+%%(i,6)->If reboiler then equal to 1, if condenser then equal 2, otherwise it equals 0.
 %%(i,7)->column number associated with reboiler or condenser. If zero, then neither reboiler or condenser
 
 %tic
@@ -15,7 +14,6 @@ numOfStreams = size(s,1);
     %Streams
     coldStreamLogical = logical(s(:,1) < s(:,2));
     hotStreamLogical = ~coldStreamLogical;
-    %(i,3)-> 1 is cold, 0 is hot
     streamSTemps = [coldStreamLogical.*( streamSTemps(:,1) + deltaTMin/2)+ hotStreamLogical.*( streamSTemps(:,1) - deltaTMin/2)...
                     ,coldStreamLogical.*( streamSTemps(:,2) + deltaTMin/2)+ hotStreamLogical.*( streamSTemps(:,2) - deltaTMin/2)];
     %Columns
