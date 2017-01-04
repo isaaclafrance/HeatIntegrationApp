@@ -21,7 +21,10 @@ public class UtilityVsDT extends LineGraph {
 		dataPoints = new HashMap<String, double[][]>();
 		setupDataPoints();
 	}
-	
+	public UtilityVsDT(ProblemTable problemTable){
+		this(problemTable, problemTable.getDeltaTMin(), problemTable.getDeltaTMin()+50.0, 50);
+	}
+		
 	//
 	private void setupDataPoints(){
 		double[] dtmXValues = calculateDtmXValues();	
@@ -63,4 +66,20 @@ public class UtilityVsDT extends LineGraph {
 		return dataPoints.get("Cold Utility");
 	}
 
+	public void setDeltaTMinBounds(double leftBound, double rightBound){
+		deltaTMinBounds[0] = leftBound;
+		deltaTMinBounds[1] = rightBound;
+		setupDataPoints();
+	}
+	public double[] getDeltaTMinBOunds(){
+		return deltaTMinBounds;
+	}
+	
+	public int getNumOfPoints(){
+		return numOfPoints;
+	}
+	public void setNumOfPoints(int numOfPoints){
+		this.numOfPoints = numOfPoints;
+		setupDataPoints();
+	}
 }

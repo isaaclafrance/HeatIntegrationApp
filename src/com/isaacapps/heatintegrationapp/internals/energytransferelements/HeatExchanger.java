@@ -56,7 +56,7 @@ public class HeatExchanger extends EnergyTransferElement {
 		return heatTransferCoeff;
 	}
 	@Override
-	public void setHeatTransferCoeff(double heatTransferCoeffPerArea) throws DefinedPropertiesException{
+	public void setHeatTransferCoeff(double heatTransferCoeffPerArea){
 		super.setHeatTransferCoeff(heatTransferCoeffPerArea);
 	}
 	

@@ -2,15 +2,15 @@ package com.isaacapps.heatintegrationapp.internals;
 
 import java.text.DecimalFormat;
 import java.util.*;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Function;
+
 import java.util.stream.*;
 import static java.util.stream.Collectors.*;
 
 import com.isaacapps.heatintegrationapp.graphics.*;
-import com.isaacapps.heatintegrationapp.internals.energytransferelements.CascadeInterval;
-import com.isaacapps.heatintegrationapp.internals.energytransferelements.Column;
-import com.isaacapps.heatintegrationapp.internals.energytransferelements.DefinedPropertiesException;
-import com.isaacapps.heatintegrationapp.internals.energytransferelements.EnergyTransferElement;
+import com.isaacapps.heatintegrationapp.internals.energytransferelements.*;
 import com.isaacapps.heatintegrationapp.internals.energytransferelements.Stream;
 
 public class ProblemTable {
@@ -22,6 +22,8 @@ public class ProblemTable {
 	private Map<Double, Set<CascadeInterval>> shiftTemp_Interval_Dict;
 	private GrandCompositeCurve gcCurve;
 	private CompositeCurve cCurve;
+	private PinchTempVsDT ptVsDt;
+	private UtilityVsDT uVsDt;
 	private EnergyCascadeDiagram ecDiagram;
 	private DecimalFormat tempFormat, heatFormat;
 	private Function<Double, Double> formatHeat, formatTemp;
@@ -32,16 +34,18 @@ public class ProblemTable {
 		this.columns = columns;
 		this.merQH = this.merQC = 0.0f;
 		this.deltaTMin = deltaTMin;
+		
 		tempFormat = new DecimalFormat("#.##");
 		heatFormat = new DecimalFormat("#.####");
 		formatHeat = (h)-> Double.parseDouble(heatFormat.format(h));
 		formatTemp = (T)-> Double.parseDouble(tempFormat.format(T));
 		cascadeIntervals = new ArrayList<>();
-		pinchTemps = new ArrayList<Set<Double>>();
 		shiftTemp_Interval_Dict = new HashMap<Double, Set<CascadeInterval>>();
-		for (int i = 0; i < 2; i++) {
+		
+		pinchTemps = new ArrayList<Set<Double>>();
+		for (int i = 0; i < 2; i++) 
 			this.pinchTemps.add(new HashSet<Double>());
-		}
+		
 		performFeasibleEnergyCascade();
 	}
 
@@ -54,8 +58,7 @@ public class ProblemTable {
 
 	private List<Double> createShiftTempVec() {
 		Set<Double> shiftTempVec = new HashSet<Double>();
-
-		//
+		
 		for (EnergyTransferElement stream : streams) {
 			shiftTempVec.add(stream.getSourceShiftTemp());
 			shiftTempVec.add(stream.getTargetShiftTemp());
@@ -99,45 +102,36 @@ public class ProblemTable {
 			shiftTemp_Interval_Dict.get(temp2).add(cascadeInterval);
 		}
 	}
-	private void calculateIntervalSpecificHeat() throws DefinedPropertiesException {
-		for (CascadeInterval interval : cascadeIntervals) {
-			if (interval.getName().contains("Stream")) {
-				for (Stream stream : streams) {
-					if (notOutsideOfTempRange(stream, interval.getSourceShiftTemp(), interval.getTargetShiftTemp())) {
-						if (stream.getType().equals("Hot")) {
-							interval.setHeatTransferCoeff(interval.getHeatTransferCoeff() + stream.getHeatTransferCoeff());
-						} else {
-							interval.setHeatTransferCoeff(interval.getHeatTransferCoeff() - stream.getHeatTransferCoeff());
-						}
-
-						interval.getEnergyTransferersCrossingInterval().add(stream);
-					}
-				}
-				interval.setName(interval.getName() + interval.getEnergyTransferersCrossingInterval().stream()
-						.map(et -> et.getName()).sorted().reduce((prev, next) -> prev + ", " + next).orElse(""));
+	private void calculateIntervalSpecificHeat() throws DefinedPropertiesException {				
+		BiConsumer<CascadeInterval, EnergyTransferElement> setHeatTransferCoeff = (cI, et) -> {
+			if (et.getType().equals("Hot") && cI.getName().contains("Stream")) {
+				cI.setHeatTransferCoeff(cI.getHeatTransferCoeff() + et.getHeatTransferCoeff());
+			} else if(et.getType().equals("Cold")&& cI.getName().contains("Stream")) {
+				cI.setHeatTransferCoeff(cI.getHeatTransferCoeff() - et.getHeatTransferCoeff());
+			}};
+		
+		BiConsumer<CascadeInterval, EnergyTransferElement> setEnergyTransferersCrossingInterval = (cI, et) -> {
+			if (et.getClass() == Stream.class && cI.getName().contains("Stream")|| ColumnEnergyTransferElement.class.isAssignableFrom(et.getClass()) 
+					                                                               && !cI.getName().contains("Stream")) {
+				cI.getEnergyTransferersCrossingInterval().add(et);
+			}};
 				
-			}
-			else{
-				for (EnergyTransferElement columnEnergyTransferer : columns.stream()
-						.flatMap(c -> java.util.stream.Stream.concat(c.getReboilers().stream(),
-								c.getCondensers().stream()))
-						.collect(Collectors.toList())) {
-					if (notOutsideOfTempRange(columnEnergyTransferer, interval.getSourceShiftTemp(), interval.getTargetShiftTemp())) {
-						interval.getEnergyTransferersCrossingInterval().add(columnEnergyTransferer);
-						interval.setName(interval.getName()+((interval.getName().split(":")[1].length() > 1)?", ":"")+columnEnergyTransferer.getName());
-					}
-				}
-			}	
-		}
+		Consumer<CascadeInterval> updateIntervalWithEnergyTransferElements = cI -> 
+				 java.util.stream.Stream.concat(streams.stream(), columns.stream().flatMap(c -> java.util.stream.Stream.concat(c.getReboilers().stream()
+						                                                                   ,c.getCondensers().stream())))
+				.filter(et -> notOutsideOfTempRange(et, cI.getSourceShiftTemp(), cI.getTargetShiftTemp()))
+				.forEach(et -> {setHeatTransferCoeff.accept(cI, et); setEnergyTransferersCrossingInterval.accept(cI, et);});	
+		
+		Consumer<CascadeInterval> setIntervalName = cI -> 
+				 cI.setName(cI.getName() + cI.getEnergyTransferersCrossingInterval().stream().map(et -> et.getName()).sorted().reduce((prev, next) -> prev + ", " + next).orElse(""));
+			
+		cascadeIntervals.stream().forEach(cI -> {updateIntervalWithEnergyTransferElements.accept(cI); setIntervalName.accept(cI);});
 	}
 	private boolean notOutsideOfTempRange(EnergyTransferElement stream, double intervalTemp1, double intervalTemp2){
-		return !(intervalTemp1 <= (stream.getType().equalsIgnoreCase("cold") ? stream.getSourceShiftTemp()
-						                                                     : stream.getTargetShiftTemp())
-				&& intervalTemp2 <= (stream.getType().equalsIgnoreCase("cold")? stream.getSourceShiftTemp() 
-						                                                      : stream.getTargetShiftTemp()))
-				&& !(intervalTemp1 >= (stream.getType().equalsIgnoreCase("hot")? stream.getSourceShiftTemp() : stream.getTargetShiftTemp())
-						&& intervalTemp2 >= (stream.getType().equalsIgnoreCase("hot")
-								? stream.getSourceShiftTemp() : stream.getTargetShiftTemp()));
+		double streamTemp1 = stream.getType().equalsIgnoreCase("cold")?stream.getSourceShiftTemp() : stream.getTargetShiftTemp();
+		double streamTemp2 = stream.getType().equalsIgnoreCase("hot")?stream.getSourceShiftTemp() : stream.getTargetShiftTemp();	
+		return !(intervalTemp1 <= streamTemp1 && intervalTemp2 <= streamTemp1 )
+				&& !(intervalTemp1 >= streamTemp2 && intervalTemp2 >= streamTemp2);
 	}
 	
 	private void calculateIntervalHeatLoads() throws DefinedPropertiesException {
@@ -145,21 +139,18 @@ public class ProblemTable {
 			if (interval.getName().contains("Stream")) {
 				interval.setHeatLoad(interval.getHeatTransferCoeff() * (interval.getSourceShiftTemp() - interval.getTargetShiftTemp()));
 			} else { //Column energy transfer elements
-				for(EnergyTransferElement colET:interval.getEnergyTransferersCrossingInterval()){
+				for(EnergyTransferElement colET:interval.getEnergyTransferersCrossingInterval())
 					interval.setHeatLoad(interval.getHeatLoad()-colET.getHeatLoad());
-				}
 			}
 		}
 	}
 
 	private List<Integer> findPinchIntervalIndices(int infesibleIndex) {
 		double maxDiff = 0.000001;
-
 		return cascadeIntervals.stream().parallel()
-				.filter(cI -> Math
-						.abs(cI.getCascadeEnergy() - cascadeIntervals.get(infesibleIndex).getCascadeEnergy()) <= maxDiff
-						&& cI.getCascadeIndex() != cascadeIntervals.size() - 1)
-				.map(cI -> cI.getCascadeIndex()).collect(toList());
+				.filter(cI -> Math.abs(cI.getCascadeEnergy() - cascadeIntervals.get(infesibleIndex).getCascadeEnergy()) <= maxDiff
+						      && cI.getIndex() != cascadeIntervals.size() - 1)
+				.map(cI -> cI.getIndex()).collect(toList());
 	}
 
 	private int findInfeasibleIntervalIndex() {
@@ -169,7 +160,7 @@ public class ProblemTable {
 						public int compare(final CascadeInterval lf, CascadeInterval rt) {
 							return Double.compare(lf.getCascadeEnergy(), rt.getCascadeEnergy());
 						}}
-		            ).get().getCascadeIndex();
+		            ).get().getIndex();
 	}
 	private void setUnshiftedPinchTemps() {
 		// Unshifted pinch temps based on whether shifted pinch temps were the
@@ -185,11 +176,9 @@ public class ProblemTable {
 	}
 	private void performEnergyCascade(double qHAdjustment) {
 		cascadeIntervals.get(0).setCascadeEnergy(qHAdjustment + cascadeIntervals.get(0).getHeatLoad());
-		for (int i = 1; i < cascadeIntervals.size(); i++) {
-			cascadeIntervals.get(i).setCascadeEnergy(
-					cascadeIntervals.get(i - 1).getCascadeEnergy() + cascadeIntervals.get(i).getHeatLoad());
-		}
-
+		
+		cascadeIntervals.stream().filter(cI->cI.getIndex()>0)
+		                         .forEachOrdered(cI->cI.setCascadeEnergy(cI.getHeatLoad()+cascadeIntervals.get(cI.getIndex()-1).getCascadeEnergy()));
 		merQH = qHAdjustment;
 		merQC = cascadeIntervals.get(cascadeIntervals.size() - 1).getCascadeEnergy();
 	}
@@ -209,13 +198,6 @@ public class ProblemTable {
 		
 		formatTempNHeatValuesOfCascadeElements();
 		formatMERElements();
-		
-		updateGraphs();
-	}
-
-	private void updateGraphs(){
-		getGrandCompositeCurve().updateGraph();
-		getCompositeCurve().updateGraph();
 	}
 	
 	private void formatTempNHeatValuesOfCascadeElements() throws DefinedPropertiesException{
@@ -278,32 +260,37 @@ public class ProblemTable {
 		this.deltaTMin = deltaTMin;
 		streams.stream().forEach(s -> s.setShiftTemps(deltaTMin));
 		columns.stream().forEach(c -> c.setShiftTemps(deltaTMin));
-		try {
-			performFeasibleEnergyCascade();
-		} catch (DefinedPropertiesException e) {
-			
-		}
+		try {performFeasibleEnergyCascade();} catch (DefinedPropertiesException e) {}
 	}
 
 	public GrandCompositeCurve getGrandCompositeCurve(){
 		//Only perform the curve calculations if necessary
-		if(gcCurve == null){
+		if(gcCurve == null)
 			gcCurve = new GrandCompositeCurve(this);
-		}
 		return gcCurve;
 	}
 	public CompositeCurve getCompositeCurve(){
 		//Only perform the curve calculations if necessary
-		if(cCurve == null){
+		if(cCurve == null)
 			cCurve = new CompositeCurve(streams, merQH);
-		}
 		return cCurve;
+	}
+	public PinchTempVsDT getPinchTempVsDT(){
+		//Only perform the curve calculations if necessary
+		if(ptVsDt == null)
+			try {ptVsDt = new PinchTempVsDT(this);} catch (DefinedPropertiesException e) {}			
+		return ptVsDt;
+	}
+	public UtilityVsDT getUtilityVsDT(){
+		//Only perform the curve calculations if necessary
+		if(uVsDt == null)
+			uVsDt = new UtilityVsDT(this);
+		return uVsDt;
 	}
 	
 	private EnergyCascadeDiagram getEnergyCascadeDiagram(){
-		if(ecDiagram == null){
+		if(ecDiagram == null)
 			ecDiagram = new EnergyCascadeDiagram(this);
-		}
 		return ecDiagram;
 	}
 	
@@ -315,7 +302,6 @@ public class ProblemTable {
 	}
 	
 	//
-
 	@Override
 	public String toString() {
 		return String.format("\"ProblemTable\":{\"Unshifted Pinch Temps\":\"%s\", \"MER QH\":\"%s\", \"MER QC\":\"%s\", \"energyCascade\":\"%s\"}"

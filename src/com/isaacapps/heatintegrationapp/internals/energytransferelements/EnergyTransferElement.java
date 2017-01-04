@@ -169,9 +169,13 @@ public class EnergyTransferElement {
 	public String getHeatTransferCoeffWithUnit(){
 		return getHeatTransferCoeff() +" "+ getHeatTransferCoeffUnit();
 	}
-	public void setHeatTransferCoeff(double HeatTransferCoeff) throws DefinedPropertiesException{
+	public void setHeatTransferCoeff(double HeatTransferCoeff){
 		this.heatTransferCoeff = HeatTransferCoeff;
-		calculateUnknownProperties();
+		try {
+			calculateUnknownProperties();
+		} catch (DefinedPropertiesException e) {
+			e.printStackTrace();
+		}
 	}
 	
 	public String getHeatUnit(){

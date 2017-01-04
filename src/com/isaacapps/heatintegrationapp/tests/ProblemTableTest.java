@@ -95,9 +95,9 @@ public class ProblemTableTest {
 
 	@Test
 	public void test_Utilities() {
-		assertEquals("MER hot utitlty (QH) is incorrect.", "450.0 K", problemTable.getMerQhWithUnit());
+		assertEquals("MER hot utility (QH) is incorrect.", "450.0 kW", problemTable.getMerQhWithUnit());
 		
-		assertEquals("MER cold utitlty (QC) is incorrect.", "250.0 K", problemTable.getMerQcWithUnit());
+		assertEquals("MER cold utility (QC) is incorrect.", "250.0 kW", problemTable.getMerQcWithUnit());
 	}
 
 }

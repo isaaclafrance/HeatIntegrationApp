@@ -43,7 +43,7 @@ public class CascadeInterval extends EnergyTransferElement {
 		this.cascadeEnergy = cascadeEnergy;
 	}
 	
-	public int getCascadeIndex(){
+	public int getIndex(){
 		return cascadeIndex;
 	}
 	

@@ -15,13 +15,13 @@ public class EnergyCascadeDiagram {
 	}
 	
 	//
-	private int getMaxTempNHeatWithUnitCharLenth( String merQHStr){
+	private int getMaxTempNHeatWithUnitCharLenth( int merQHStrLen){
 		return problemTable.getCascadeIntervals().stream()
 				.flatMap(cI -> Arrays.asList(cI.getHeatLoadWithUnit(), cI.getTargetShiftTempWithUnit()).stream())
 				.mapToInt(size -> size.length())
-				.filter(i-> i > merQHStr.length())
+				.filter(i-> i > merQHStrLen)
 				.max()
-				.orElse(merQHStr.length());
+				.orElse(merQHStrLen);
 	}
 	private String getMERQHString(String merQH, String arrowPadding, Function<String, String> padTempOrLoad){
 		
@@ -30,7 +30,7 @@ public class EnergyCascadeDiagram {
 				, padTempOrLoad.apply(merQH)
 				, padTempOrLoad.apply(problemTable.getCascadeIntervals().get(0).getSourceShiftTempWithUnit()));
 	}
-	private String getCascadeIntervalsString(String merQH, String arrowPadding, int maxTempNLoadCharLength, Function<String, String> padTempOrLoad){
+	private String getCascadeIntervalsString(String arrowPadding, int maxTempNLoadCharLength, Function<String, String> padTempOrLoad){
 		String boxTopNBottom = new String(new char[maxTempNLoadCharLength]).replace("\0", "*");
 		
 		return problemTable.getCascadeIntervals().stream().map(cI -> String.format("\n#%1$s# \n#%2$s%2$s # \n#%3$s %4$s \n#%2$s%2$s # \n#%1$s# \n%2$s| \n%5$s \n%2$s| \n%2$sV \n%6$s"
@@ -41,20 +41,20 @@ public class EnergyCascadeDiagram {
 																,padTempOrLoad.apply(cI.getTargetTempWithUnit())
 																    + (problemTable.getShiftPinchTemps().contains(cI.getTargetTemp()) 
 																    		                      && cI.getSourceTemp() != cI.getTargetTemp() ? " <<<---PINCH" : "")))
-										.reduce((prev,curr)->prev+curr).orElse("");
+										                  .reduce((prev,curr)->prev+curr).orElse("");
 	}
 	private String getEnergyCascadeString() {
 		String merQH = "MER QH: " + problemTable.getMerQhWithUnit();
 		
 		int initialTempNLoadPadding = 2;  
-		int maxTempNLoadCharLength = getMaxTempNHeatWithUnitCharLenth(merQH);
+		int maxTempNLoadCharLength = getMaxTempNHeatWithUnitCharLenth(merQH.length());
 		
 		String arrowPadding = new String(new char[(int) Math.floor(maxTempNLoadCharLength / 2.0)]).replace("\0", " ");
 		
-		Function<String, String> padTempOrLoad = tempOrLoadStr -> new String(
-				new char[(initialTempNLoadPadding + maxTempNLoadCharLength - tempOrLoadStr.length()) / 2]).replace("\0"," ")+tempOrLoadStr;
+		Function<String, String> padTempOrLoad = tempOrLoadStr -> new String(new char[(initialTempNLoadPadding + maxTempNLoadCharLength - tempOrLoadStr.length()) / 2])
+				                                                            .replace("\0"," ")+tempOrLoadStr;
 		
-		return  getMERQHString(merQH, arrowPadding, padTempOrLoad) + getCascadeIntervalsString(merQH, arrowPadding, maxTempNLoadCharLength, padTempOrLoad);
+		return  getMERQHString(merQH, arrowPadding, padTempOrLoad) + getCascadeIntervalsString(arrowPadding, maxTempNLoadCharLength, padTempOrLoad);
 				                         
 	}
 	

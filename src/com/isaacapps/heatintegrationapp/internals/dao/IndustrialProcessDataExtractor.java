@@ -28,19 +28,15 @@ public class IndustrialProcessDataExtractor{
 		Pattern industrialProcessPattern = Pattern.compile("{Industrial Process\": {[^#]+, [^#]+ \n, [^#]* \n, [^#]* \n, [^#]+ \n, [^#]+ \n, [^#]+}}");
 		
 		Matcher industrialProcessPatternMatcher = industrialProcessPattern.matcher(bufferedExtractionDataReader.lines()
-																	 	  .reduce("", (prevLine, currLine)->prevLine+currLine));
+																	 	          .reduce("", (prevLine, currLine)->prevLine+currLine));
 		
-		return IntStream.iterate(1, i->i++)
-				        .limit(industrialProcessPatternMatcher.groupCount())
-				        .boxed()
-				        .map(index -> industrialProcessPatternMatcher.group(index))
-				        .map(ipStr -> extractIndustrialProcesses(ipStr))
-				        .filter(ip -> ip != null)
-				        .collect(toList());		                         
+		return IntStream.range(1, industrialProcessPatternMatcher.groupCount()+1).boxed()
+				        .map(index -> industrialProcessPatternMatcher.group(index)).map(ipStr -> extractIndustrialProcess(ipStr))
+				        .filter(ip -> ip != null).collect(toList());		                         
 	}
 	
 	//
-	private IndustrialProcess extractIndustrialProcesses(String industrialProcessStr){
+	private IndustrialProcess extractIndustrialProcess(String industrialProcessStr){
 		//TODO: extract industrial info from string and convert into a list of streams
 		IndustrialProcess industrialProcess;
 		try {
@@ -103,8 +99,7 @@ public class IndustrialProcessDataExtractor{
 		//TODO: extract pre MER QH info from file
 		try{
 			return Pattern.compile("\"preMERHotUtility\": \"[\\d\\.]+ \\w+\"")
-					      .matcher(industrialProcessStr)
-					      .group()
+					      .matcher(industrialProcessStr).group()
 					      .split(":")[1].trim();
 		}catch(Exception e){
 			throw new DataExtractionException("Extraction of PreMERHotUtility", e.getMessage());
@@ -115,8 +110,7 @@ public class IndustrialProcessDataExtractor{
 		//TODO: extract pre MER QC info from file
 		try{
 			return Pattern.compile("\"preMERColdUtility\": \"[\\d\\.]+ \\w+\"")
-					      		.matcher(industrialProcessStr)
-					      		.group()
+					      		.matcher(industrialProcessStr).group()
 					      		.split(":")[1].trim();
 		}catch(Exception e){
 			throw new DataExtractionException("Extraction of PreMERColdUtility", e.getMessage());
